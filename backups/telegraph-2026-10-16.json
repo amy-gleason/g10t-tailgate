@@ -1,0 +1,235 @@
+{
+  "revision": 55,
+  "signups": [
+    {
+      "id": "0016861c-6b12-4f19-b74b-c9c3896c80ab",
+      "itemId": "cheese-slices",
+      "name": "Autumn Gentry",
+      "qty": 16,
+      "note": "",
+      "createdAt": "2026-10-15T22:23:11.872Z",
+      "updatedAt": "2026-10-15T22:29:05.362Z"
+    },
+    {
+      "id": "6f7b0399-2226-4d13-a6d9-7692c3c28021",
+      "itemId": "f61988d2-2268-41a2-b0af-24022d523d45",
+      "name": "Autumn Gentry",
+      "qty": 2,
+      "note": "",
+      "createdAt": "2026-10-15T22:25:55.408Z",
+      "updatedAt": "2026-10-15T22:25:55.408Z"
+    },
+    {
+      "id": "924d8141-085c-4b60-83bc-090ff96bfd24",
+      "itemId": "red-bull",
+      "name": "Autumn Gentry",
+      "qty": 6,
+      "note": "",
+      "createdAt": "2026-10-15T22:30:04.448Z",
+      "updatedAt": "2026-10-15T22:30:04.448Z"
+    },
+    {
+      "id": "bce5f622-65ec-4614-be78-e406dcdfe485",
+      "itemId": "vodka",
+      "name": "Autumn Gentry",
+      "qty": 1,
+      "note": "1 handle",
+      "createdAt": "2026-10-15T22:30:18.170Z",
+      "updatedAt": "2026-10-15T22:30:18.170Z"
+    },
+    {
+      "id": "9168ae37-780d-4fa8-bbda-968bde104971",
+      "itemId": "champagne",
+      "name": "Autumn Gentry",
+      "qty": 4,
+      "note": "",
+      "createdAt": "2026-10-15T22:30:33.009Z",
+      "updatedAt": "2026-10-15T22:30:33.009Z"
+    },
+    {
+      "id": "913179cd-c05c-41cf-b45b-fb057809e125",
+      "itemId": "diet-soda",
+      "name": "Autumn Gentry",
+      "qty": 12,
+      "note": "",
+      "createdAt": "2026-10-15T22:30:49.348Z",
+      "updatedAt": "2026-10-15T22:30:49.348Z"
+    },
+    {
+      "id": "0bd9dc51-44e8-4b62-8284-0e9d384e7cb0",
+      "itemId": "regular-soda",
+      "name": "Autumn Gentry",
+      "qty": 12,
+      "note": "",
+      "createdAt": "2026-10-15T22:30:57.287Z",
+      "updatedAt": "2026-10-15T22:30:57.287Z"
+    },
+    {
+      "id": "e1b724f1-fa37-4615-a0e0-d84a2954b952",
+      "itemId": "pineapple-juice",
+      "name": "Autumn Gentry",
+      "qty": 1,
+      "note": "",
+      "createdAt": "2026-10-15T22:31:04.250Z",
+      "updatedAt": "2026-10-15T22:31:04.250Z"
+    },
+    {
+      "id": "6421cd1f-5a73-46ba-b0d7-68c3a0d838f8",
+      "itemId": "water",
+      "name": "Autumn Gentry",
+      "qty": 2,
+      "note": "",
+      "createdAt": "2026-10-15T22:31:22.170Z",
+      "updatedAt": "2026-10-15T22:31:22.170Z"
+    },
+    {
+      "id": "18bf26b7-ff0a-47d8-ad8e-1f3dfec4c329",
+      "itemId": "cranberry-juice",
+      "name": "Autumn Gentry",
+      "qty": 1,
+      "note": "",
+      "createdAt": "2026-10-15T22:31:29.435Z",
+      "updatedAt": "2026-10-15T22:31:29.435Z"
+    },
+    {
+      "id": "b3a1af6e-a4e7-49a3-b8c1-f586fe2ff9a4",
+      "itemId": "a4d2803e-fd35-4bab-a3f4-bcdb6f57dae0",
+      "name": "Autumn Gentry",
+      "qty": 1,
+      "note": "",
+      "createdAt": "2026-10-15T22:31:58.252Z",
+      "updatedAt": "2026-10-15T22:31:58.252Z"
+    },
+    {
+      "id": "5c2d3683-7f69-4680-9572-aa73b4ca8ce0",
+      "itemId": "23587a82-59a2-41d7-80c9-e973ac2afc29",
+      "name": "Autumn Gentry",
+      "qty": 1,
+      "note": "",
+      "createdAt": "2026-10-15T22:32:15.830Z",
+      "updatedAt": "2026-10-15T22:32:15.830Z"
+    },
+    {
+      "id": "ec06d8a1-c2a4-4209-8e5c-216363a5e120",
+      "itemId": "d8c00670-272b-4d70-854f-6e3bcad34adc",
+      "name": "Autumn Gentry",
+      "qty": 1,
+      "note": "",
+      "createdAt": "2026-10-15T22:33:00.170Z",
+      "updatedAt": "2026-10-15T22:33:00.170Z"
+    }
+  ],
+  "customItems": [
+    {
+      "id": "f61988d2-2268-41a2-b0af-24022d523d45",
+      "name": "Doughnuts",
+      "unit": "boxes",
+      "category": "food",
+      "createdAt": "2026-10-15T22:25:55.408Z"
+    },
+    {
+      "id": "a4d2803e-fd35-4bab-a3f4-bcdb6f57dae0",
+      "name": "Woodford",
+      "unit": "bottle",
+      "category": "drink",
+      "createdAt": "2026-10-15T22:31:58.252Z"
+    },
+    {
+      "id": "23587a82-59a2-41d7-80c9-e973ac2afc29",
+      "name": "Makers",
+      "unit": "bottle",
+      "category": "drink",
+      "createdAt": "2026-10-15T22:32:15.830Z"
+    },
+    {
+      "id": "d8c00670-272b-4d70-854f-6e3bcad34adc",
+      "name": "OJ",
+      "unit": "Jug",
+      "category": "drink",
+      "createdAt": "2026-10-15T22:33:00.170Z"
+    }
+  ],
+  "donations": [],
+  "attendees": [
+    {
+      "id": "seed-amy",
+      "name": "Amy",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:00.000Z",
+      "updatedAt": "2026-10-15T12:00:00.000Z"
+    },
+    {
+      "id": "seed-mike",
+      "name": "Mike",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:01.000Z",
+      "updatedAt": "2026-10-15T12:00:01.000Z"
+    },
+    {
+      "id": "seed-katie",
+      "name": "Katie",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:02.000Z",
+      "updatedAt": "2026-10-15T12:00:02.000Z"
+    },
+    {
+      "id": "seed-morgan",
+      "name": "Morgan",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:03.000Z",
+      "updatedAt": "2026-10-15T12:00:03.000Z"
+    },
+    {
+      "id": "seed-jackson",
+      "name": "Jackson",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:04.000Z",
+      "updatedAt": "2026-10-15T12:00:04.000Z"
+    },
+    {
+      "id": "seed-braden",
+      "name": "Braden",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:05.000Z",
+      "updatedAt": "2026-10-15T12:00:05.000Z"
+    },
+    {
+      "id": "seed-tessa",
+      "name": "Tessa",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-15T12:00:06.000Z",
+      "updatedAt": "2026-10-15T12:00:06.000Z"
+    },
+    {
+      "id": "e2b2dbf2-dbd9-44c0-b78d-daffcc41bc2e",
+      "name": "Autumn Gentry",
+      "guests": 2,
+      "note": "Audrey Parsons Yates",
+      "createdAt": "2026-10-15T22:21:33.023Z",
+      "updatedAt": "2026-10-15T22:21:33.023Z"
+    },
+    {
+      "id": "8ff35cc0-8547-4d32-a5a1-60f3462b6ca2",
+      "name": "Megan",
+      "guests": 3,
+      "note": "George & Meg",
+      "createdAt": "2026-10-16T03:45:59.159Z",
+      "updatedAt": "2026-10-16T03:46:40.454Z"
+    },
+    {
+      "id": "263f1f47-4b6a-4225-a5ff-0cafa8232d22",
+      "name": "Julie brooks",
+      "guests": 1,
+      "note": "",
+      "createdAt": "2026-10-16T04:21:31.003Z",
+      "updatedAt": "2026-10-16T04:21:31.003Z"
+    }
+  ]
+}
