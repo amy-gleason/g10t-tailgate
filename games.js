@@ -103,7 +103,7 @@
         "Signup list for the Tennessee vs Kentucky tailgate at Neyland Stadium, Saturday, November 7, 2026.",
       banner: "Tennessee vs Kentucky",
       date: "Saturday, November 7, 2026",
-      kickoff: "TBA (6-8 PM ET window)",
+      kickoff: "6:15 PM ET on ESPN (Homecoming)",
       heading: "Tennessee vs Kentucky, Neyland Stadium",
       leads: LEADS,
       foodNote: "Food plan coming soon: " + MENU,
