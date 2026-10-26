@@ -104,10 +104,12 @@
       banner: "Tennessee vs Kentucky",
       date: "Saturday, November 7, 2026",
       kickoff: "6:15 PM ET on ESPN (Homecoming)",
+      schedule:
+        "Tent is open in the morning; we'll arrive around 10-10:30 AM ET. Catered food service 1:15-2:15 PM ET. Kickoff 6:15 PM ET on ESPN (Homecoming).",
       heading: "Tennessee vs Kentucky, Neyland Stadium",
       leads: LEADS,
       foodNote:
-        "Volunteer Tailgate (feeds 20). Food arrives about 1:15-2:15 PM ET (4-5 hours before the 6:15 PM kickoff).\n" +
+        "Volunteer Tailgate (feeds 20). Catered food service 1:15-2:15 PM ET.\n" +
         [
           "Grilled Chicken Teriyaki",
           "BBQ Pork with Buns",

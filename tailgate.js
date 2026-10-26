@@ -1536,6 +1536,7 @@
     var main = i("main");
     main.append(i("p", { class: "date" }, game.date));
     if (game.kickoff) main.append(i("p", { class: "kickoff" }, "Kickoff: " + game.kickoff));
+    if (game.schedule) main.append(i("p", { class: "lead" }, game.schedule));
     main.append(i("h1", null, game.heading));
     if (game.locationPlacement === "top") {
       var top = i("div", { class: "location-top", id: "location" });
