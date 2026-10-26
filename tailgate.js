@@ -1166,6 +1166,25 @@
           i("ul", { class: "needs" }, ...e.map((t) => i("li", null, t))),
         );
   }
+  function foodIntro(text) {
+    if (typeof text != "string" || text.indexOf("\n") === -1) {
+      return i("p", { class: "lead" }, text);
+    }
+    var lines = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return i(
+      "div",
+      null,
+      i("p", { class: "lead" }, lines[0]),
+      i(
+        "ul",
+        { class: "needs" },
+        ...lines.slice(1).map((line) => i("li", null, line)),
+      ),
+    );
+  }
   function m() {
     let e = s.board,
       t = document.querySelector("#status"),
@@ -1280,7 +1299,7 @@
     let de = H().filter((c) => c.section === "food"),
       ce = H().filter((c) => c.section === "drink");
     (o.replaceChildren(
-      i("p", { class: "lead" }, P),
+      foodIntro(P),
       ...de.map(W),
       Z(
         "food",

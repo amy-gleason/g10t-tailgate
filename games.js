@@ -106,8 +106,32 @@
       kickoff: "6:15 PM ET on ESPN (Homecoming)",
       heading: "Tennessee vs Kentucky, Neyland Stadium",
       leads: LEADS,
-      foodNote: "Food plan coming soon: " + MENU,
-      items: itemsFor(["dolly-shots"]),
+      foodNote:
+        "Volunteer Tailgate (feeds 20). Food arrives about 1:15-2:15 PM ET (4-5 hours before the 6:15 PM kickoff).\n" +
+        [
+          "Grilled Chicken Teriyaki",
+          "BBQ Pork with Buns",
+          "Naked Wings with Carrot Sticks & Celery, plus Calhoun's Wing Sauce & Ranch",
+          "Smoky Mountain Baked Beans",
+          "Spinach Artichoke Dip with Tortilla Chips",
+          "Chocolate Chip Cookies",
+        ].join("\n"),
+      items: itemsFor(["dolly-shots"])
+        .filter(function (item) {
+          return item.id !== "cheese-slices";
+        })
+        .concat([
+          {
+            id: "chick-fil-a-biscuits",
+            name: "Chick-fil-A biscuits (breakfast)",
+            singular: "biscuit",
+            plural: "biscuits",
+            target: null,
+            hint: "",
+            countHint: "Count biscuits.",
+            section: "food",
+          },
+        ]),
       location: locationFor("confirm"),
       locationPlacement: "top",
       seedAttendees: false,
