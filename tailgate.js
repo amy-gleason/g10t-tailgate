@@ -1585,19 +1585,6 @@
         ),
       );
     }
-    if (/^https:\/\//.test(game.albumUrl || "")) {
-      main.append(
-        i(
-          "p",
-          { class: "site-link" },
-          i(
-            "a",
-            { href: game.albumUrl, target: "_blank", rel: "noopener" },
-            "Shared photos and videos",
-          ),
-        ),
-      );
-    }
     if (game.locationPlacement === "top") {
       var top = i("div", { class: "location-top", id: "location" });
       top.append(i("p", { class: "kicker" }, "Location"));
@@ -1616,6 +1603,10 @@
       ["drinks", "Drink list", false, [i("div", { id: "drinks-body" })]],
       ["donations", "Donations (optional)", false, [i("div", { id: "donations-body" })]],
     ];
+    if (game.media) {
+      specs.push(["photos", "Photos & videos", false, [i("div", { id: "photos-body" })]]);
+      specs.push(["posts", "Posts", false, [i("div", { id: "posts-body" })]]);
+    }
     if (game.locationPlacement === "accordion") {
       specs.push(["location", "Directions", false, locationNodes()]);
     }

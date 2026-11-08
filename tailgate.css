@@ -20,6 +20,14 @@ h3 { font-size: 1.25rem; margin: 0; }
 .hint { color: #262626; margin: 8px 0 0; }
 .kicker { margin: 12px 0 0; font-weight: 650; }
 .site-link { margin: 16px 0 0; font-weight: 700; font-size: 1.125rem; }
+.gallery, .post-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.shot, .file-tile, .post { border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; overflow: hidden; }
+.shot img, .shot video { display: block; width: 100%; max-height: 240px; object-fit: contain; background: #171717; }
+.file-tile, .post { padding: 12px; }
+.reply { margin: 8px 0 0 12px; padding-top: 8px; border-top: 1px solid #e5e5e5; }
+.meter { height: 10px; border-radius: 99px; background: #e5e5e5; overflow: hidden; margin-top: 8px; }
+.meter > span { display: block; height: 100%; background: #ff8200; width: 0; }
+.file-input { margin-top: 8px; font: 1rem inherit; }
 .site-link a { text-decoration: underline; }
 .location-top { margin-top: 8px; padding-top: 4px; }
 .loc-title { font-weight: 700; }

@@ -149,7 +149,8 @@
         { href: "../", label: "LSU" },
         { href: "../alabama/", label: "Alabama" },
       ],
-      albumUrl: "",
+      media: true,
+      mediaApi: "",
     },
     lsu: {
       id: "lsu",
@@ -180,7 +181,8 @@
         { href: "kentucky/", label: "Kentucky" },
         { href: "alabama/", label: "Alabama" },
       ],
-      albumUrl: "",
+      media: true,
+      mediaApi: "",
     },
   };
 })();

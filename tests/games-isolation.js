@@ -40,9 +40,11 @@ assert.ok(!/high noon|nutrl|twelve-pack|brand/i.test(lsu.covered[1].detail) || /
 assert.ok(/not set/i.test(lsu.covered[2].detail));
 assert.strictEqual(lsu.celebration, "Amy's 55th Birthday Celebration");
 assert.strictEqual(lsu.seedAttendees, false);
-assert.strictEqual(lsu.albumUrl, "");
-assert.strictEqual(kentucky.albumUrl, "");
-assert.ok(!alabama.albumUrl);
+assert.strictEqual(lsu.media, true);
+assert.strictEqual(lsu.mediaApi, "");
+assert.strictEqual(kentucky.media, true);
+assert.strictEqual(kentucky.mediaApi, "");
+assert.ok(!alabama.media);
 
 assert.ok(kentucky.foodNote.includes("Grilled Chicken Teriyaki"));
 assert.strictEqual(kentucky.telegraphPath, "G10T-tailgate-Kentucky-10-26");
@@ -60,8 +62,12 @@ assert.ok(alabama.nav.some((link) => link.href === "../kentucky/"));
 
 assert.ok(appSource.includes("This game is pointed at the Kentucky list."));
 assert.ok(appSource.includes("This game is pointed at the Alabama list."));
-assert.ok(appSource.includes('if (/^https:\\/\\//.test(game.albumUrl || ""))'));
-assert.ok(!/type="file"|upload photo|upload video/i.test(appSource));
+assert.ok(!appSource.includes("albumUrl"));
 assert.ok(!/shared photos and videos/i.test(gamesSource));
+const client = fs.readFileSync("media-client.js", "utf8");
+assert.ok(client.includes("Photos and videos aren't available yet"));
+assert.ok(client.includes("Posts aren't available yet"));
+assert.ok(client.includes("localhost"));
+assert.ok(!client.includes("local-test-pin"));
 
 console.log("isolation checks passed");
