@@ -1,8 +1,7 @@
-# Not deployed from this repo. The private bucket g10t-tailgate-media is
-# created separately. Do not put secret values in this file.
-# Uploads and messages stay closed until GUEST_PIN_LSU, GUEST_PIN_KENTUCKY,
-# and OWNER_TOKEN exist. The deploy metadata turns the two flags on; an empty
-# secret still returns "not configured".
+# Staging Worker is already deployed with these gates off and with no secrets.
+# Do not put secret values in this file. GUEST_PIN_LSU and GUEST_PIN_KENTUCKY
+# may be set to the same guest code later. OWNER_TOKEN stays a different secret.
+# Leave UPLOADS_ENABLED and POSTS_ENABLED false until that testing step.
 name = "g10t-tailgate-media"
 main = "src/index.js"
 compatibility_date = "2026-03-01"

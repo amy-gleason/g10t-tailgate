@@ -150,7 +150,7 @@
         { href: "../alabama/", label: "Alabama" },
       ],
       media: true,
-      mediaApi: "",
+      mediaApi: "https://g10t-tailgate-media.g10t-tailgate.workers.dev",
     },
     lsu: {
       id: "lsu",
@@ -182,7 +182,7 @@
         { href: "alabama/", label: "Alabama" },
       ],
       media: true,
-      mediaApi: "",
+      mediaApi: "https://g10t-tailgate-media.g10t-tailgate.workers.dev",
     },
   };
 })();

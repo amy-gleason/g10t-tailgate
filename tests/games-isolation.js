@@ -41,10 +41,11 @@ assert.ok(/not set/i.test(lsu.covered[2].detail));
 assert.strictEqual(lsu.celebration, "Amy's 55th Birthday Celebration");
 assert.strictEqual(lsu.seedAttendees, false);
 assert.strictEqual(lsu.media, true);
-assert.strictEqual(lsu.mediaApi, "");
+assert.strictEqual(lsu.mediaApi, "https://g10t-tailgate-media.g10t-tailgate.workers.dev");
 assert.strictEqual(kentucky.media, true);
-assert.strictEqual(kentucky.mediaApi, "");
+assert.strictEqual(kentucky.mediaApi, lsu.mediaApi);
 assert.ok(!alabama.media);
+assert.ok(!alabama.mediaApi);
 
 assert.ok(kentucky.foodNote.includes("Grilled Chicken Teriyaki"));
 assert.strictEqual(kentucky.telegraphPath, "G10T-tailgate-Kentucky-10-26");
