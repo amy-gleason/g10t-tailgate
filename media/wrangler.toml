@@ -1,7 +1,8 @@
-# Not deployed. R2 and Workers are not enabled for this account yet.
-# After explicit approval, create the bucket, set the three secrets below in
-# Cloudflare (not in this file), then deploy. Leave uploads and posts off
-# until those secrets exist.
+# Not deployed from this repo. The private bucket g10t-tailgate-media is
+# created separately. Do not put secret values in this file.
+# Uploads and messages stay closed until GUEST_PIN_LSU, GUEST_PIN_KENTUCKY,
+# and OWNER_TOKEN exist. The deploy metadata turns the two flags on; an empty
+# secret still returns "not configured".
 name = "g10t-tailgate-media"
 main = "src/index.js"
 compatibility_date = "2026-03-01"

@@ -138,6 +138,14 @@
         .catch(function () { meta.append(note("Could not download that file.")); });
     });
     meta.append(download);
+    if (ownerToken()) {
+      var removeFile = el("button", { type: "button", class: "btn ghost" }, "Remove file");
+      removeFile.addEventListener("click", function () {
+        fetch(api + "/v1/" + gameId + "/files/" + file.id, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
+          .then(function () { loadFiles(); });
+      });
+      meta.append(removeFile);
+    }
     if (file.preview === "none") {
       meta.prepend(note("This browser can't preview this file. The original is unchanged."));
       card.append(meta);
@@ -231,11 +239,22 @@
         el("p", { class: "lead" }, post.text)
       );
       (post.replies || []).forEach(function (reply) {
-        block.append(el("div", { class: "reply" },
+        var replyBlock = el("div", { class: "reply" },
           el("p", { class: "row-title" }, reply.name),
           el("p", { class: "hint" }, when(reply.createdAt)),
           el("p", {}, reply.text)
-        ));
+        );
+        if (ownerToken()) {
+          var removeReply = el("button", { type: "button", class: "btn ghost" }, "Remove reply");
+          removeReply.addEventListener("click", function () {
+            fetch(api + "/v1/" + gameId + "/posts/" + post.id + "/replies/" + reply.id, {
+              method: "DELETE",
+              headers: guestHeaders({ "x-owner-token": ownerToken() }),
+            }).then(function () { loadPosts(); });
+          });
+          replyBlock.append(removeReply);
+        }
+        block.append(replyBlock);
       });
       block.append(replyForm(post));
       if (ownerToken()) {

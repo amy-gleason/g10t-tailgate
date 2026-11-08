@@ -178,6 +178,64 @@ test("oversized upload is rejected from the declared size", async () => {
   } finally { await mf.dispose(); }
 });
 
+test("file quota is enforced across concurrent uploads and released on delete", async () => {
+  const mf = worker({ MAX_GAME_FILES: "3" });
+  try {
+    const results = await Promise.all(Array.from({ length: 6 }, (_, index) => call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: {
+        "x-guest-pin": "pin-lsu",
+        "x-guest-name": "Local test",
+        "x-file-name": `local-test-${index}.png`,
+        "content-type": "image/png",
+      },
+      body: PNG,
+    })));
+    const saved = results.filter((result) => result.status === 201);
+    assert.equal(saved.length, 3);
+    const listed = await call(mf, "/v1/lsu/files", { headers: { "x-guest-pin": "pin-lsu" } });
+    assert.equal(listed.payload.files.length, 3);
+    const removed = await call(mf, `/v1/lsu/files/${saved[0].payload.id}`, {
+      method: "DELETE",
+      headers: { "x-guest-pin": "pin-lsu", "x-owner-token": "owner-test" },
+    });
+    assert.equal(removed.status, 200);
+    const again = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: {
+        "x-guest-pin": "pin-lsu",
+        "x-guest-name": "Local test",
+        "x-file-name": "local-test-after.png",
+        "content-type": "image/png",
+      },
+      body: PNG,
+    });
+    assert.equal(again.status, 201);
+    const escaped = await call(mf, "/v1/lsu/files/not-a-uuid", { headers: { "x-guest-pin": "pin-lsu" } });
+    assert.equal(escaped.status, 404);
+  } finally { await mf.dispose(); }
+});
+
+test("health and cors do not leak secrets or allow other sites", async () => {
+  const mf = worker();
+  try {
+    const health = await call(mf, "/health");
+    assert.equal(health.status, 200);
+    assert.equal(health.payload.ok, true);
+    assert.equal(health.payload.games.lsu, true);
+    assert.equal(health.payload.owner, true);
+    assert.equal(JSON.stringify(health.payload).includes("pin-lsu"), false);
+    const open = await call(mf, "/health", { headers: { origin: "https://amy-gleason.github.io" } });
+    assert.equal(open.headers.get("access-control-allow-origin"), "https://amy-gleason.github.io");
+    const local = await call(mf, "/health", { headers: { origin: "http://127.0.0.1:8765" } });
+    assert.equal(local.headers.get("access-control-allow-origin"), "http://127.0.0.1:8765");
+    const blocked = await call(mf, "/health", { headers: { origin: "https://evil.example" } });
+    assert.equal(blocked.headers.get("access-control-allow-origin"), null);
+    const missing = await call(mf, "/v1/lsu/files");
+    assert.equal(missing.status, 401);
+  } finally { await mf.dispose(); }
+});
+
 test("kill switch and missing pin fail closed", async () => {
   const off = worker({ UPLOADS_ENABLED: "false", POSTS_ENABLED: "false" });
   try {
