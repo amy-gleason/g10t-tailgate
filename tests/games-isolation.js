@@ -66,7 +66,8 @@ assert.ok(!appSource.includes("albumUrl"));
 assert.ok(!/shared photos and videos/i.test(gamesSource));
 const client = fs.readFileSync("media-client.js", "utf8");
 assert.ok(client.includes("Photos and videos aren't available yet"));
-assert.ok(client.includes("Posts aren't available yet"));
+assert.ok(client.includes("Messages aren't available yet"));
+assert.ok(client.includes("Send message"));
 assert.ok(client.includes("localhost"));
 assert.ok(!client.includes("local-test-pin"));
 

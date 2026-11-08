@@ -34,7 +34,7 @@
   var api = mediaBase();
   if (!api) {
     photos.replaceChildren(note("Photos and videos aren't available yet. Sharing stays off until storage is turned on."));
-    posts.replaceChildren(note("Posts aren't available yet. The board stays off until storage is turned on."));
+    posts.replaceChildren(note("Messages aren't available yet. The board stays off until storage is turned on."));
     return;
   }
 
@@ -75,7 +75,7 @@
     var error = el("div");
     if (errorText) error.append(el("p", { class: "form-error", role: "alert" }, errorText));
     var form = el("form", { class: "stack" },
-      el("p", { class: "lead" }, "Enter the guest code to see photos, videos, and posts for this game."),
+      el("p", { class: "lead" }, "Enter the guest code to see photos, videos, and messages for this game."),
       el("label", { class: "field" }, el("span", { class: "label" }, "Guest code"), input),
       error,
       el("button", { type: "submit", class: "btn" }, "Continue")
@@ -87,7 +87,7 @@
       loadAll();
     });
     photos.replaceChildren(form);
-    posts.replaceChildren(note("Enter the guest code under Photos & videos."));
+    posts.replaceChildren(note("Enter the guest code under Photos & videos to open messages."));
   }
 
   function uploadFiles(files, name, list) {
@@ -201,14 +201,14 @@
 
   function renderPosts(data) {
     var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name", autocomplete: "name" });
-    var text = el("input", { class: "input", maxLength: "1000", placeholder: "Write a note" });
+    var text = el("input", { class: "input", maxLength: "1000", placeholder: "Write a message" });
     var error = el("div");
     var form = el("form", { class: "stack" },
-      el("p", { class: "lead" }, "Notes and replies for this game. This is a board, not a live chat."),
+      el("p", { class: "lead" }, "Messages and replies for this game. This is a board, not a live chat."),
       el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name),
-      el("label", { class: "field" }, el("span", { class: "label" }, "Note"), text),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Message"), text),
       error,
-      el("button", { type: "submit", class: "btn" }, "Post")
+      el("button", { type: "submit", class: "btn" }, "Send message")
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -218,7 +218,7 @@
         body: JSON.stringify({ name: name.value, text: text.value }),
       }).then(function (response) { return response.json().then(function (payload) { return { ok: response.ok, payload: payload }; }); })
         .then(function (result) {
-          if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not post.")); return; }
+          if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not send that message.")); return; }
           text.value = "";
           loadPosts();
         });
@@ -239,7 +239,7 @@
       });
       block.append(replyForm(post));
       if (ownerToken()) {
-        var remove = el("button", { type: "button", class: "btn ghost" }, "Remove post");
+        var remove = el("button", { type: "button", class: "btn ghost" }, "Remove message");
         remove.addEventListener("click", function () {
           fetch(api + "/v1/" + gameId + "/posts/" + post.id, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
             .then(function () { loadPosts(); });
@@ -257,7 +257,7 @@
     var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Owner key" });
     input.value = ownerToken();
     var form = el("form", { class: "stack" },
-      el("p", { class: "hint" }, "Owner key removes posts or files. Guests do not get this."),
+      el("p", { class: "hint" }, "Owner key removes messages or files. Guests do not get this."),
       input,
       el("button", { type: "submit", class: "btn ghost" }, "Save owner key on this phone")
     );
@@ -284,10 +284,10 @@
       return response.json().then(function (payload) { return { status: response.status, payload: payload }; });
     }).then(function (result) {
       if (result.status === 401) { gate("That guest code was not accepted."); return; }
-      if (result.status === 503) { posts.replaceChildren(note("Posts aren't available yet. The board stays off until storage is turned on.")); return; }
-      if (result.status !== 200) { posts.replaceChildren(note(result.payload.error || "Could not load posts.")); return; }
+      if (result.status === 503) { posts.replaceChildren(note("Messages aren't available yet. The board stays off until storage is turned on.")); return; }
+      if (result.status !== 200) { posts.replaceChildren(note(result.payload.error || "Could not load messages.")); return; }
       renderPosts(result.payload);
-    }).catch(function () { posts.replaceChildren(note("Posts aren't available yet.")); });
+    }).catch(function () { posts.replaceChildren(note("Messages aren't available yet.")); });
   }
   function loadAll() { return Promise.all([loadFiles(), loadPosts()]); }
   if (!pin) gate("");

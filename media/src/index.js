@@ -241,26 +241,26 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     return json({ posts }, 200, origin);
   }
   if (request.method === "POST" && !id) {
-    if (env.POSTS_ENABLED !== "true") return json({ error: "Posts are turned off." }, 403, origin);
+    if (env.POSTS_ENABLED !== "true") return json({ error: "Messages are turned off." }, 403, origin);
     const payload = await request.json().catch(() => null);
     const name = plain(payload?.name, 40);
     const text = plain(payload?.text, 1000);
-    if (!name || !text) return json({ error: "Enter your name and a note." }, 400, origin);
-    if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many posts. Wait a few minutes." }, 429, origin);
+    if (!name || !text) return json({ error: "Enter your name and a message." }, 400, origin);
+    if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const existing = await listAll(env, `posts/${game}/`);
     if (existing.length >= num(env, "MAX_POSTS", 500)) return json({ error: "The board is full." }, 413, origin);
     const post = { id: crypto.randomUUID(), name, text, createdAt: new Date().toISOString(), replies: [] };
     const stored = await mutateJson(env, `posts/${game}/${post.id}.json`, () => post, () => post);
-    if (!stored) return json({ error: "Could not save that post. Try again." }, 409, origin);
+    if (!stored) return json({ error: "Could not save that message. Try again." }, 409, origin);
     return json({ post: stored }, 201, origin);
   }
   if (request.method === "POST" && id && !replyId) {
-    if (env.POSTS_ENABLED !== "true") return json({ error: "Posts are turned off." }, 403, origin);
+    if (env.POSTS_ENABLED !== "true") return json({ error: "Messages are turned off." }, 403, origin);
     const payload = await request.json().catch(() => null);
     const name = plain(payload?.name, 40);
     const text = plain(payload?.text, 1000);
     if (!name || !text) return json({ error: "Enter your name and a reply." }, 400, origin);
-    if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many posts. Wait a few minutes." }, 429, origin);
+    if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const key = `posts/${game}/${id}.json`;
     const stored = await mutateJson(
       env,
@@ -277,8 +277,8 @@ async function handlePosts(request, env, game, origin, id, replyId) {
         };
       },
     );
-    if (!stored) return json({ error: "That post is gone." }, 404, origin);
-    if (stored.blocked) return json({ error: "That post has too many replies." }, 413, origin);
+    if (!stored) return json({ error: "That message is gone." }, 404, origin);
+    if (stored.blocked) return json({ error: "That message has too many replies." }, 413, origin);
     return json({ post: stored }, 201, origin);
   }
   if (request.method === "DELETE" && id) {
@@ -291,7 +291,7 @@ async function handlePosts(request, env, game, origin, id, replyId) {
         () => null,
         (post) => (post ? { ...post, replies: (post.replies || []).filter((reply) => reply.id !== replyId) } : null),
       );
-      if (!stored) return json({ error: "That post is gone." }, 404, origin);
+      if (!stored) return json({ error: "That message is gone." }, 404, origin);
       return json({ post: stored }, 200, origin);
     }
     await env.MEDIA.delete(`posts/${game}/${id}.json`);

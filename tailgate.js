@@ -1605,7 +1605,7 @@
     ];
     if (game.media) {
       specs.push(["photos", "Photos & videos", false, [i("div", { id: "photos-body" })]]);
-      specs.push(["posts", "Posts", false, [i("div", { id: "posts-body" })]]);
+      specs.push(["posts", "Messages", false, [i("div", { id: "posts-body" })]]);
     }
     if (game.locationPlacement === "accordion") {
       specs.push(["location", "Directions", false, locationNodes()]);
