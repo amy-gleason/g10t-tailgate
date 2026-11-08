@@ -562,13 +562,25 @@
       localStorage.setItem(e, t);
     } catch {}
   }
+  function pathProblem(found) {
+    var locked = {
+      alabama: "G10T-tailgate-data-10-15",
+      kentucky: "G10T-tailgate-Kentucky-10-26",
+    };
+    if (locked[found.id] && found.telegraphPath !== locked[found.id]) {
+      return found.id + " is wired to the wrong list.";
+    }
+    if (found.id !== "alabama" && found.telegraphPath === locked.alabama) {
+      return "This game is pointed at the Alabama list.";
+    }
+    if (found.id !== "kentucky" && found.telegraphPath === locked.kentucky) {
+      return "This game is pointed at the Kentucky list.";
+    }
+    return "";
+  }
   async function oe(e) {
-    if (game.telegraphPath === "G10T-tailgate-data-10-15" && game.id !== "alabama") {
-      throw new Error("Refusing to write the Alabama list.");
-    }
-    if (game.id === "alabama" && game.telegraphPath !== "G10T-tailgate-data-10-15") {
-      throw new Error("Alabama is wired to the wrong list.");
-    }
+    var problem = pathProblem(game);
+    if (problem) throw new Error("Refusing to write. " + problem);
     let n = new URLSearchParams({
         access_token:
           "efb35591d90ebe09b367cbaba05104b105b3a9e8ea4c7f6b1715032f73e5",
@@ -1166,6 +1178,25 @@
           i("ul", { class: "needs" }, ...e.map((t) => i("li", null, t))),
         );
   }
+  function coveredList() {
+    var items = game.covered || [];
+    if (!items.length) return null;
+    return i(
+      "div",
+      { class: "card" },
+      i("h3", null, "Already covered"),
+      i(
+        "p",
+        { class: "hint" },
+        "These are already taken care of. You do not need to bring these.",
+      ),
+      i(
+        "ul",
+        { class: "needs" },
+        ...items.map((item) => i("li", null, item.name + ": " + item.detail)),
+      ),
+    );
+  }
   function foodIntro(text) {
     if (typeof text != "string" || text.indexOf("\n") === -1) {
       return i("p", { class: "lead" }, text);
@@ -1308,18 +1339,23 @@
       ),
     ),
       a.replaceChildren(
-        z(X("drink")),
-        i(
-          "p",
-          { class: "hint" },
-          "Tap Edit or Remove on a row to change it. Please only change your own.",
-        ),
-        ...ce.map(W),
-        Z(
-          "drink",
-          "Add a drink",
-          "Bringing another drink? Add it in your own words.",
-        ),
+        ...[
+          coveredList(),
+          ce.length ? z(X("drink")) : null,
+          ce.length
+            ? i(
+                "p",
+                { class: "hint" },
+                "Tap Edit or Remove on a row to change it. Please only change your own.",
+              )
+            : null,
+          ...ce.map(W),
+          Z(
+            "drink",
+            "Add a drink",
+            "Bringing another drink? Add it in your own words.",
+          ),
+        ].filter(Boolean),
       ));
     let T = [...e.donations].sort((c, k) =>
         c.createdAt.localeCompare(k.createdAt),
@@ -1415,16 +1451,9 @@
       );
       return null;
     }
-    if (id === "alabama" && found.telegraphPath !== "G10T-tailgate-data-10-15") {
-      document.body.append(
-        document.createTextNode("Alabama is wired to the wrong list."),
-      );
-      return null;
-    }
-    if (id !== "alabama" && found.telegraphPath === "G10T-tailgate-data-10-15") {
-      document.body.append(
-        document.createTextNode("This game is pointed at the Alabama list."),
-      );
+    var problem = pathProblem(found);
+    if (problem) {
+      document.body.append(document.createTextNode(problem));
       return null;
     }
     return found;
@@ -1524,6 +1553,7 @@
       "beforeend",
       '<svg viewBox="0 0 168 148" width="92" height="80" aria-hidden="true"><path fill="#FF8200" d="M8 6h152v40H104v94H64V46H8V6z"/></svg>',
     );
+    if (game.celebration) brand.append(i("p", { class: "celebration" }, game.celebration));
     brand.append(
       i("p", { class: "banner" }, game.banner),
       i("div", { class: "stripe", "aria-hidden": "true" }),
@@ -1538,14 +1568,15 @@
     if (game.kickoff) main.append(i("p", { class: "kickoff" }, "Kickoff: " + game.kickoff));
     if (game.schedule) main.append(i("p", { class: "lead" }, game.schedule));
     main.append(i("h1", null, game.heading));
-    if (game.locationPlacement === "top") {
-      var top = i("div", { class: "location-top", id: "location" });
-      top.append(i("p", { class: "kicker" }, "Location"));
-      locationNodes().forEach((node) => top.append(node));
-      main.append(top);
-    }
-    game.leads.forEach((lead) => main.append(i("p", { class: "lead" }, lead)));
-    if (game.pastTailgates) {
+    if (game.nav && game.nav.length) {
+      var nav = i("p", { class: "site-link" });
+      if (game.navLabel) nav.append(document.createTextNode(game.navLabel + " "));
+      game.nav.forEach((link, index) => {
+        if (index) nav.append(document.createTextNode(" · "));
+        nav.append(i("a", { href: link.href }, link.label));
+      });
+      main.append(nav);
+    } else if (game.pastTailgates) {
       main.append(
         i(
           "p",
@@ -1554,6 +1585,26 @@
         ),
       );
     }
+    if (/^https:\/\//.test(game.albumUrl || "")) {
+      main.append(
+        i(
+          "p",
+          { class: "site-link" },
+          i(
+            "a",
+            { href: game.albumUrl, target: "_blank", rel: "noopener" },
+            "Shared photos and videos",
+          ),
+        ),
+      );
+    }
+    if (game.locationPlacement === "top") {
+      var top = i("div", { class: "location-top", id: "location" });
+      top.append(i("p", { class: "kicker" }, "Location"));
+      locationNodes().forEach((node) => top.append(node));
+      main.append(top);
+    }
+    game.leads.forEach((lead) => main.append(i("p", { class: "lead" }, lead)));
     main.append(
       i("p", { class: "status", id: "status" }, "Shared list. It refreshes every few seconds."),
       i("div", { id: "alert" }),

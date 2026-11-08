@@ -93,6 +93,11 @@
       seedAttendees: true,
       past: true,
       currentGame: { href: "../", label: "Current game" },
+      navLabel: "Games",
+      nav: [
+        { href: "../", label: "LSU" },
+        { href: "../kentucky/", label: "Kentucky" },
+      ],
     },
     kentucky: {
       id: "kentucky",
@@ -137,8 +142,45 @@
       location: locationFor("confirm"),
       locationPlacement: "top",
       seedAttendees: false,
+      past: true,
+      currentGame: { href: "../", label: "Current game" },
+      navLabel: "Games",
+      nav: [
+        { href: "../", label: "LSU" },
+        { href: "../alabama/", label: "Alabama" },
+      ],
+      albumUrl: "",
+    },
+    lsu: {
+      id: "lsu",
+      telegraphPath: "G10T-tailgate-LSU-11-08",
+      telegraphTitle: "G10T tailgate LSU",
+      pageTitle: "Amy's 55th Birthday · Tennessee vs LSU",
+      description:
+        "Signup list for Amy's 55th birthday and Tennessee vs LSU at Neyland Stadium, Saturday, November 21, 2026.",
+      celebration: "Amy's 55th Birthday Celebration",
+      banner: "Tennessee vs LSU",
+      date: "Saturday, November 21, 2026",
+      kickoff: "TBD",
+      heading: "Tennessee vs LSU, Neyland Stadium",
+      leads: LEADS,
+      foodNote: "Food plan is not confirmed yet. Nothing has been ordered for this game.",
+      items: [],
+      covered: [
+        { name: "Beer", detail: "24 individual drinks. Brand and pack size are not set." },
+        { name: "Seltzer", detail: "24 individual drinks. Not a specific brand." },
+        { name: "Jack Fire", detail: "Already covered. Amount is not set." },
+      ],
+      location: locationFor("confirm"),
+      locationPlacement: "top",
+      seedAttendees: false,
       past: false,
-      pastTailgates: { href: "alabama/", label: "Past tailgates" },
+      navLabel: "Past games",
+      nav: [
+        { href: "kentucky/", label: "Kentucky" },
+        { href: "alabama/", label: "Alabama" },
+      ],
+      albumUrl: "",
     },
   };
 })();
