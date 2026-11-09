@@ -164,7 +164,10 @@
       heading: "Tennessee vs LSU, Neyland Stadium",
       leads: LEADS,
       foodNote: "Food plan is not confirmed yet. Nothing has been ordered for this game.",
-      items: [],
+      items: [
+        { id: "mustard-bottles", name: "Mustard bottles", singular: "bottle", plural: "bottles", target: null, hint: "", countHint: "Count bottles.", section: "food" },
+        { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: null, hint: "", countHint: "Count balls.", section: "food" },
+      ],
       covered: [
         { name: "Beer", detail: "24 individual drinks. Brand and pack size are not set." },
         { name: "Seltzer", detail: "24 individual drinks. Not a specific brand." },

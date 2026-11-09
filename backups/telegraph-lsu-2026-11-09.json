@@ -1,0 +1,29 @@
+{
+  "source": "G10T-tailgate-LSU-11-08",
+  "fetched": "2026-11-09",
+  "sha256": "75463aac69cfccd788239b228b5235ddba38c5300c197670fcad05d1f30c14f7",
+  "board": {
+    "revision": 2,
+    "signups": [],
+    "customItems": [],
+    "donations": [],
+    "attendees": [
+      {
+        "id": "seed-amy",
+        "name": "Amy",
+        "guests": 1,
+        "note": "",
+        "createdAt": "2026-11-08T12:00:00.000Z",
+        "updatedAt": "2026-11-08T12:00:00.000Z"
+      },
+      {
+        "id": "seed-mike",
+        "name": "Mike",
+        "guests": 1,
+        "note": "",
+        "createdAt": "2026-11-08T12:00:01.000Z",
+        "updatedAt": "2026-11-08T12:00:01.000Z"
+      }
+    ]
+  }
+}

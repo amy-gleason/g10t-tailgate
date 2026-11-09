@@ -29,7 +29,16 @@ assert.strictEqual(new Set(paths).size, 3);
 assert.strictEqual(lsu.kickoff, "TBD");
 assert.strictEqual(lsu.schedule, undefined);
 assert.ok(!/teriyaki|1:15-2:15|feeds 20|High Noon|Nutrl|twelve-pack/i.test(lsu.foodNote));
-assert.strictEqual(lsu.items.length, 0);
+assert.strictEqual(
+  JSON.stringify(lsu.items.map((item) => [item.name, item.target, item.section])),
+  JSON.stringify([
+    ["Mustard bottles", null, "food"],
+    ["Golf balls", null, "food"],
+  ]),
+);
+assert.ok(!lsu.covered.some((item) => /mustard|golf/i.test(item.name)));
+assert.ok(!kentucky.items.some((item) => item.id === "mustard-bottles" || item.id === "golf-balls"));
+assert.ok(!alabama.items.some((item) => item.id === "mustard-bottles" || item.id === "golf-balls"));
 assert.strictEqual(
   JSON.stringify(lsu.covered.map((item) => item.name)),
   JSON.stringify(["Beer", "Seltzer", "Jack Fire"]),
