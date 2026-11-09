@@ -80,6 +80,8 @@ button.total:focus-visible { outline: 3px solid #171717; outline-offset: 2px; }
 .field { display: flex; flex-direction: column; }
 .label { font-weight: 650; }
 .input { margin-top: 8px; min-height: 56px; padding: 0 12px; border: 1px solid #d4d4d4; border-radius: 8px; font: 1.125rem inherit; color: #171717; background: #fff; }
+.message-box { display: block; width: 100%; min-height: 7.5rem; padding: 12px; resize: none; overflow: hidden; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.125rem; margin: 8px 0 0; }
 .form-error { color: #171717; font-weight: 700; margin: 0; }
 .field-error { color: #9f1239; font-weight: 700; margin: 8px 0 0; }
 .batch { margin-top: 12px; }

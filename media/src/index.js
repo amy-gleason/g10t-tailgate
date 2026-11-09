@@ -61,6 +61,16 @@ function plain(value, max) {
   return text;
 }
 
+function messageText(value, max) {
+  if (typeof value !== "string") return { text: "", tooLong: false };
+  const text = value
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+  return { text, tooLong: text.length > max };
+}
+
 function num(env, key, fallback) {
   const value = Number(env[key]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -351,8 +361,10 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     if (env.POSTS_ENABLED !== "true") return json({ error: "Messages are turned off." }, 403, origin);
     const payload = await request.json().catch(() => null);
     const name = plain(payload?.name, 40);
-    const text = plain(payload?.text, 1000);
-    if (!name || !text) return json({ error: "Enter your name and a message." }, 400, origin);
+    const body = messageText(payload?.text, 5000);
+    if (!name || !body.text) return json({ error: "Enter your name and a message." }, 400, origin);
+    if (body.tooLong) return json({ error: "That message is longer than 5000 characters." }, 400, origin);
+    const text = body.text;
     if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const maxPosts = num(env, "MAX_POSTS", 500);
     const reserved = await reserveSlot(
@@ -380,8 +392,10 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     if (env.POSTS_ENABLED !== "true") return json({ error: "Messages are turned off." }, 403, origin);
     const payload = await request.json().catch(() => null);
     const name = plain(payload?.name, 40);
-    const text = plain(payload?.text, 1000);
-    if (!name || !text) return json({ error: "Enter your name and a reply." }, 400, origin);
+    const body = messageText(payload?.text, 1000);
+    if (!name || !body.text) return json({ error: "Enter your name and a reply." }, 400, origin);
+    if (body.tooLong) return json({ error: "That reply is longer than 1000 characters." }, 400, origin);
+    const text = body.text;
     if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const key = `posts/${game}/${id}.json`;
     const stored = await mutateJson(
