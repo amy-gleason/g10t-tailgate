@@ -273,13 +273,37 @@
     photos.append(list, ownerTools(function () { return loadFiles(); }));
   }
 
+  var MESSAGE_LIMIT = 1000;
+  function fitMessage(box) {
+    box.style.height = "auto";
+    box.style.height = box.scrollHeight + "px";
+  }
+  function messageBox(placeholder) {
+    var box = el("textarea", { class: "input message-box", rows: "4", placeholder: placeholder });
+    box.addEventListener("input", function () { fitMessage(box); });
+    return box;
+  }
+  function messageBody(text) {
+    return el("p", { class: "message-body" }, text);
+  }
+  function tooLong(kind, value) {
+    return "This " + kind + " is " + value.length + " characters. The limit is " + MESSAGE_LIMIT + ", so it was not sent.";
+  }
   function replyForm(post) {
     var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name" });
-    var text = el("input", { class: "input", maxLength: "1000", placeholder: "Reply" });
+    var text = messageBox("Reply");
     var error = el("div");
-    var form = el("form", { class: "stack" }, name, text, error, el("button", { type: "submit", class: "btn" }, "Reply"));
+    var button = el("button", { type: "submit", class: "btn" }, "Reply");
+    var form = el("form", { class: "stack" }, name, text, error, button);
+    name.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") event.preventDefault();
+    });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      if (text.value.length > MESSAGE_LIMIT) {
+        error.replaceChildren(el("p", { class: "form-error" }, tooLong("reply", text.value)));
+        return;
+      }
       fetch(api + "/v1/" + gameId + "/posts/" + post.id, {
         method: "POST",
         headers: guestHeaders({ "content-type": "application/json" }),
@@ -287,6 +311,8 @@
       }).then(function (response) { return response.json().then(function (payload) { return { ok: response.ok, payload: payload }; }); })
         .then(function (result) {
           if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not reply.")); return; }
+          text.value = "";
+          fitMessage(text);
           loadPosts();
         });
     });
@@ -295,7 +321,7 @@
 
   function renderPosts(data) {
     var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name", autocomplete: "name" });
-    var text = el("input", { class: "input", maxLength: "1000", placeholder: "Write a message" });
+    var text = messageBox("Write a message");
     var error = el("div");
     var form = el("form", { class: "stack" },
       el("p", { class: "lead" }, "Messages and replies for this game. This is a board, not a live chat."),
@@ -304,8 +330,15 @@
       error,
       el("button", { type: "submit", class: "btn" }, "Send message")
     );
+    name.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") event.preventDefault();
+    });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      if (text.value.length > MESSAGE_LIMIT) {
+        error.replaceChildren(el("p", { class: "form-error" }, tooLong("message", text.value)));
+        return;
+      }
       fetch(api + "/v1/" + gameId + "/posts", {
         method: "POST",
         headers: guestHeaders({ "content-type": "application/json" }),
@@ -314,6 +347,7 @@
         .then(function (result) {
           if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not send that message.")); return; }
           text.value = "";
+          fitMessage(text);
           loadPosts();
         });
     });
@@ -322,13 +356,13 @@
       var block = el("article", { class: "post" },
         el("p", { class: "row-title" }, post.name),
         el("p", { class: "hint" }, when(post.createdAt)),
-        el("p", { class: "lead" }, post.text)
+        messageBody(post.text)
       );
       (post.replies || []).forEach(function (reply) {
         var replyBlock = el("div", { class: "reply" },
           el("p", { class: "row-title" }, reply.name),
           el("p", { class: "hint" }, when(reply.createdAt)),
-          el("p", {}, reply.text)
+          messageBody(reply.text)
         );
         if (ownerToken()) {
           var removeReply = el("button", { type: "button", class: "btn ghost" }, "Remove reply");
