@@ -33,7 +33,7 @@ function corsHeaders(origin, extra) {
   if (allowedOrigin(origin)) {
     headers.set("access-control-allow-origin", origin);
     headers.set("vary", "Origin");
-    headers.set("access-control-allow-headers", "content-type, x-guest-pin, x-owner-token, x-file-name, x-guest-name");
+    headers.set("access-control-allow-headers", "content-type, x-guest-pin, x-owner-token, x-file-name, x-guest-name, x-batch-id, x-batch-size");
     headers.set("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
   }
   return headers;
@@ -168,6 +168,44 @@ async function releaseSlot(env, game, files, bytes, posts) {
   );
 }
 
+function batchRequest(request) {
+  const sizeHeader = request.headers.get("x-batch-size");
+  const idHeader = request.headers.get("x-batch-id");
+  if (sizeHeader == null && idHeader == null) return { legacy: true };
+  const batchSize = Number(sizeHeader);
+  const batchId = String(idHeader || "").toLowerCase();
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 50) {
+    return { error: "Choose 50 files or fewer at a time." };
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(batchId)) {
+    return { error: "Choose 50 files or fewer at a time." };
+  }
+  return { id: batchId, size: batchSize };
+}
+
+async function claimBatch(env, game, batch) {
+  const next = await mutateJson(
+    env,
+    `meta/${game}/batches.json`,
+    () => ({ order: [batch.id], counts: { [batch.id]: 1 }, blocked: false }),
+    (data) => {
+      const counts = { ...(data.counts || {}) };
+      const order = Array.isArray(data.order) ? data.order.slice() : [];
+      if (!Object.prototype.hasOwnProperty.call(counts, batch.id)) {
+        counts[batch.id] = 0;
+        order.push(batch.id);
+      }
+      if (counts[batch.id] >= batch.size || counts[batch.id] >= 50) {
+        return { order, counts, blocked: true };
+      }
+      counts[batch.id] += 1;
+      while (order.length > 40) delete counts[order.shift()];
+      return { order, counts, blocked: false };
+    },
+  );
+  return Boolean(next && next.blocked === false);
+}
+
 async function rateAllow(env, game, kind, limit) {
   const key = `meta/${game}/rate.json`;
   const now = Date.now();
@@ -243,7 +281,11 @@ async function handleFiles(request, env, game, origin, id) {
     const bytes = Number(request.headers.get("content-length"));
     const max = PHOTO_TYPES.has(type) ? num(env, "MAX_PHOTO_BYTES", 20971520) : num(env, "MAX_VIDEO_BYTES", 83886080);
     if (!Number.isInteger(bytes) || bytes < 1 || bytes > max) return json({ error: "That file is empty or too large." }, 413, origin);
-    if (!(await rateAllow(env, game, "uploads", 8))) return json({ error: "Too many uploads. Wait a few minutes." }, 429, origin);
+    const batch = batchRequest(request);
+    if (batch.error) return json({ error: batch.error }, 400, origin);
+    if (!batch.legacy && !(await claimBatch(env, game, batch))) {
+      return json({ error: "That batch is already full. Retry only the files that did not upload." }, 400, origin);
+    }
     const maxFiles = num(env, "MAX_GAME_FILES", 200);
     const maxBytes = num(env, "MAX_GAME_BYTES", 2147483648);
     const reserved = await reserveSlot(

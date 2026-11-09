@@ -90,35 +90,110 @@
     posts.replaceChildren(note("Enter the guest code under Photos & videos to open messages."));
   }
 
-  function uploadFiles(files, name, list) {
-    Array.from(files).forEach(function (file) {
+  var batchHost = null;
+
+  function uploadFiles(files, name) {
+    var batchId = crypto.randomUUID();
+    var batchSize = files.length;
+    if (!batchHost) batchHost = el("div", { class: "batch" });
+    var summary = el("p", { class: "batch-summary", role: "status" });
+    var rows = el("div", { class: "gallery" });
+    var retry = el("button", { type: "button", class: "btn" }, "Retry files that did not upload");
+    retry.hidden = true;
+    batchHost.replaceChildren(summary, rows, retry);
+    if (!batchHost.isConnected && photos) photos.append(batchHost);
+    var items = Array.from(files).map(function (file) {
       var meter = el("span");
-      var row = el("div", { class: "file-tile" }, el("p", { class: "row-title" }, file.name), el("div", { class: "meter" }, meter), el("p", { class: "hint" }, "Waiting…"));
-      list.prepend(row);
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", api + "/v1/" + gameId + "/files");
-      xhr.setRequestHeader("content-type", typeFor(file));
-      xhr.setRequestHeader("x-file-name", file.name);
-      xhr.setRequestHeader("x-guest-name", name);
-      xhr.setRequestHeader("x-guest-pin", pin);
-      xhr.upload.onprogress = function (event) {
-        if (!event.lengthComputable) return;
-        meter.style.width = Math.round(event.loaded / event.total * 100) + "%";
-        row.lastChild.textContent = "Uploading " + Math.round(event.loaded / event.total * 100) + "%";
-      };
-      xhr.onload = function () {
-        var payload = {};
-        try { payload = JSON.parse(xhr.responseText); } catch (err) {}
-        if (xhr.status >= 200 && xhr.status < 300) {
-          row.lastChild.textContent = "Uploaded";
-          loadFiles();
-        } else {
-          row.lastChild.textContent = payload.error || "Could not upload that file.";
-        }
-      };
-      xhr.onerror = function () { row.lastChild.textContent = "Could not upload that file."; };
-      xhr.send(file);
+      var status = el("p", { class: "hint" }, "Waiting…");
+      var row = el("div", { class: "file-tile" }, el("p", { class: "row-title" }, file.name), el("div", { class: "meter" }, meter), status);
+      rows.append(row);
+      return { file: file, meter: meter, status: status, state: "pending", error: "" };
     });
+    function paint() {
+      var uploaded = items.filter(function (item) { return item.state === "uploaded"; }).length;
+      var failed = items.filter(function (item) { return item.state === "failed"; });
+      var pending = items.filter(function (item) { return item.state === "pending" || item.state === "uploading"; }).length;
+      var text = "Uploaded " + uploaded + " of " + items.length + ".";
+      if (pending) text += " " + pending + " still going.";
+      if (failed.length) text += " " + failed.length + " not uploaded.";
+      summary.textContent = text;
+      retry.hidden = !failed.length || pending > 0;
+      retry.textContent = "Retry " + failed.length + (failed.length === 1 ? " file that did not upload" : " files that did not upload");
+    }
+    function send(item) {
+      item.state = "uploading";
+      item.status.textContent = "Uploading…";
+      paint();
+      return new Promise(function (resolve) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", api + "/v1/" + gameId + "/files");
+        xhr.setRequestHeader("content-type", typeFor(item.file));
+        xhr.setRequestHeader("x-file-name", item.file.name);
+        xhr.setRequestHeader("x-guest-name", name);
+        xhr.setRequestHeader("x-guest-pin", pin);
+        xhr.setRequestHeader("x-batch-id", batchId);
+        xhr.setRequestHeader("x-batch-size", String(batchSize));
+        xhr.upload.onprogress = function (event) {
+          if (!event.lengthComputable) return;
+          item.meter.style.width = Math.round(event.loaded / event.total * 100) + "%";
+          item.status.textContent = "Uploading " + Math.round(event.loaded / event.total * 100) + "%";
+        };
+        xhr.onload = function () {
+          var payload = {};
+          try { payload = JSON.parse(xhr.responseText); } catch (err) {}
+          if (xhr.status >= 200 && xhr.status < 300) {
+            item.state = "uploaded";
+            item.error = "";
+            item.status.textContent = "Uploaded";
+          } else {
+            item.state = "failed";
+            item.error = payload.error || "Could not upload that file.";
+            item.status.textContent = "Not uploaded. " + item.error;
+          }
+          paint();
+          resolve();
+        };
+        xhr.onerror = function () {
+          item.state = "failed";
+          item.error = "Could not upload that file.";
+          item.status.textContent = "Not uploaded. " + item.error;
+          paint();
+          resolve();
+        };
+        xhr.send(item.file);
+      });
+    }
+    function pool(list) {
+      var cursor = 0;
+      var active = 0;
+      return new Promise(function (resolve) {
+        function pump() {
+          if (cursor >= list.length && active === 0) { resolve(); return; }
+          while (active < 4 && cursor < list.length) {
+            var item = list[cursor];
+            cursor += 1;
+            active += 1;
+            send(item).then(function () { active -= 1; pump(); });
+          }
+        }
+        if (!list.length) resolve();
+        else pump();
+      });
+    }
+    function run(list, id, size) {
+      batchId = id;
+      batchSize = size;
+      return pool(list).then(function () { paint(); return loadFiles(); });
+    }
+    retry.addEventListener("click", function () {
+      var failed = items.filter(function (item) { return item.state === "failed"; });
+      if (!failed.length) return;
+      failed.forEach(function (item) { item.state = "pending"; item.error = ""; item.status.textContent = "Waiting…"; item.meter.style.width = "0"; });
+      paint();
+      run(failed, crypto.randomUUID(), failed.length);
+    });
+    paint();
+    return run(items, batchId, batchSize);
   }
 
   function fileCard(file) {
@@ -168,23 +243,34 @@
     var picker = el("input", { class: "file-input", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
     var list = el("div", { class: "gallery" });
     (data.files || []).forEach(function (file) { list.append(fileCard(file)); });
+    var batchError = el("p", { class: "field-error", role: "alert" });
+    batchError.hidden = true;
     var form = el("form", { class: "stack" },
       el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name),
       el("label", { class: "field" }, el("span", { class: "label" }, "Photos and videos"), picker),
+      batchError,
       el("button", { type: "submit", class: "btn" }, "Upload")
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       if (!name.value.trim() || !picker.files.length) return;
-      uploadFiles(picker.files, name.value.trim(), list);
+      if (picker.files.length > 50) {
+        batchError.hidden = false;
+        batchError.textContent = "Choose 50 files or fewer at a time.";
+        return;
+      }
+      batchError.hidden = true;
+      batchError.textContent = "";
+      uploadFiles(Array.from(picker.files), name.value.trim());
       picker.value = "";
     });
-    photos.replaceChildren(
+    photos.replaceChildren();
+    photos.append(
       el("p", { class: "lead" }, "Photos and videos for this game stay separate from the other games."),
-      form,
-      list,
-      ownerTools(function () { return loadFiles(); })
+      form
     );
+    if (batchHost) photos.append(batchHost);
+    photos.append(list, ownerTools(function () { return loadFiles(); }));
   }
 
   function replyForm(post) {

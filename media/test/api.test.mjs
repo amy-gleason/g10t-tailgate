@@ -39,6 +39,157 @@ async function call(mf, path, options = {}) {
   return { status: response.status, payload, headers: response.headers };
 }
 
+function batchHeaders(id, size, name) {
+  return {
+    "x-guest-pin": "pin-lsu",
+    "x-guest-name": "Local test",
+    "x-file-name": name,
+    "content-type": "image/png",
+    "x-batch-id": id,
+    "x-batch-size": String(size),
+  };
+}
+
+test("a batch accepts 50 and the next file, not a 10 minute window", async () => {
+  const mf = worker();
+  try {
+    const legacy = [];
+    for (let index = 0; index < 9; index += 1) {
+      const result = await call(mf, "/v1/lsu/files", {
+        method: "POST",
+        headers: {
+          "x-guest-pin": "pin-lsu",
+          "x-guest-name": "Local test",
+          "x-file-name": `legacy-${index}.png`,
+          "content-type": "image/png",
+        },
+        body: PNG,
+      });
+      legacy.push(result.status);
+    }
+    assert.deepEqual(legacy, [201, 201, 201, 201, 201, 201, 201, 201, 201]);
+
+    const tooMany = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: batchHeaders("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", 51, "too-many.png"),
+      body: PNG,
+    });
+    assert.equal(tooMany.status, 400);
+    assert.equal(tooMany.payload.error, "Choose 50 files or fewer at a time.");
+
+    const first = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1";
+    const accepted = [];
+    for (let index = 0; index < 2; index += 1) {
+      accepted.push(await call(mf, "/v1/lsu/files", {
+        method: "POST",
+        headers: batchHeaders(first, 2, `batch-a-${index}.png`),
+        body: PNG,
+      }));
+    }
+    assert.deepEqual(accepted.map((result) => result.status), [201, 201]);
+    const overflow = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: batchHeaders(first, 2, "batch-a-extra.png"),
+      body: PNG,
+    });
+    assert.equal(overflow.status, 400);
+    assert.equal(overflow.payload.error, "That batch is already full. Retry only the files that did not upload.");
+
+    const second = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: batchHeaders("cccccccc-cccc-4ccc-8ccc-ccccccccccc1", 1, "batch-b.png"),
+      body: PNG,
+    });
+    assert.equal(second.status, 201);
+
+    const fifty = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1";
+    for (let index = 0; index < 50; index += 1) {
+      const result = await call(mf, "/v1/kentucky/files", {
+        method: "POST",
+        headers: {
+          "x-guest-pin": "pin-kentucky",
+          "x-guest-name": "Local test",
+          "x-file-name": `fifty-${index}.png`,
+          "content-type": "image/png",
+          "x-batch-id": fifty,
+          "x-batch-size": "50",
+        },
+        body: PNG,
+      });
+      assert.equal(result.status, 201, `file ${index} status ${result.status}`);
+    }
+    const fiftyFirst = await call(mf, "/v1/kentucky/files", {
+      method: "POST",
+      headers: {
+        "x-guest-pin": "pin-kentucky",
+        "x-guest-name": "Local test",
+        "x-file-name": "fifty-extra.png",
+        "content-type": "image/png",
+        "x-batch-id": fifty,
+        "x-batch-size": "50",
+      },
+      body: PNG,
+    });
+    assert.equal(fiftyFirst.status, 400);
+    const fiftyNext = await call(mf, "/v1/kentucky/files", {
+      method: "POST",
+      headers: {
+        "x-guest-pin": "pin-kentucky",
+        "x-guest-name": "Local test",
+        "x-file-name": "fifty-new-batch.png",
+        "content-type": "image/png",
+        "x-batch-id": "ffffffff-ffff-4fff-8fff-fffffffffff1",
+        "x-batch-size": "1",
+      },
+      body: PNG,
+    });
+    assert.equal(fiftyNext.status, 201);
+
+    const listed = await call(mf, "/v1/lsu/files", { headers: { "x-guest-pin": "pin-lsu" } });
+    assert.equal(listed.payload.files.length, 12);
+  } finally {
+    await mf.dispose();
+  }
+});
+
+test("game file quota and message rate limit stay in place", async () => {
+  const mf = worker({ MAX_GAME_FILES: "2" });
+  try {
+    const first = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: batchHeaders("dddddddd-dddd-4ddd-8ddd-ddddddddddd1", 1, "quota-1.png"),
+      body: PNG,
+    });
+    const second = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: batchHeaders("dddddddd-dddd-4ddd-8ddd-ddddddddddd2", 1, "quota-2.png"),
+      body: PNG,
+    });
+    const third = await call(mf, "/v1/lsu/files", {
+      method: "POST",
+      headers: batchHeaders("dddddddd-dddd-4ddd-8ddd-ddddddddddd3", 1, "quota-3.png"),
+      body: PNG,
+    });
+    assert.deepEqual([first.status, second.status, third.status], [201, 201, 413]);
+    assert.equal(third.payload.error, "This game's storage is full.");
+
+    const statuses = [];
+    for (let index = 0; index < 13; index += 1) {
+      const result = await call(mf, "/v1/lsu/posts", {
+        method: "POST",
+        headers: { "x-guest-pin": "pin-lsu" },
+        body: { name: "Local test", text: `message ${index}` },
+      });
+      statuses.push(result.status);
+      if (index === 12) assert.equal(result.payload.error, "Too many messages. Wait a few minutes.");
+    }
+    assert.equal(statuses.filter((status) => status === 201).length, 12);
+    assert.equal(statuses[12], 429);
+  } finally {
+    await mf.dispose();
+  }
+});
+
 test("guest pin, type, size, isolation, preview, and owner delete", async () => {
   const mf = worker();
   try { await runFiles(mf); } finally { await mf.dispose(); }
