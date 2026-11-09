@@ -1529,23 +1529,47 @@
     return section;
   }
   function gameMenu() {
-    var nav = i("nav", { class: "site-nav", "aria-label": "Games" });
-    if (game.past && game.currentGame) {
-      nav.append(i("a", { class: "current-game", href: game.currentGame.href }, game.currentGame.label));
-    }
-    var games = game.pastGames || [];
-    if (!games.length) return nav;
-    var details = i("details", { class: "past-games" });
-    details.append(i("summary", null, "Past games"));
+    var wrap = i("div", { class: "game-nav" });
+    var button = i("button", {
+      type: "button",
+      class: "menu-button",
+      "aria-label": "Games",
+      "aria-expanded": "false",
+      "aria-controls": "game-menu",
+    });
+    button.append(i("span", { class: "menu-icon", "aria-hidden": "true" }));
+    var menu = i("nav", { id: "game-menu", class: "game-menu", "aria-label": "Games" });
+    menu.hidden = true;
     var list = i("ul");
-    games.forEach((link) => {
+    (game.gamesMenu || []).forEach((link) => {
       var attrs = { href: link.href };
       if (link.current) attrs["aria-current"] = "page";
       list.append(i("li", null, i("a", attrs, link.label)));
     });
-    details.append(list);
-    nav.append(details);
-    return nav;
+    menu.append(list);
+    function setOpen(open) {
+      menu.hidden = !open;
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    button.addEventListener("click", function () {
+      var open = menu.hidden;
+      setOpen(open);
+      if (open) {
+        var first = menu.querySelector("a");
+        if (first) first.focus();
+      }
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !menu.hidden) {
+        setOpen(false);
+        button.focus();
+      }
+    });
+    document.addEventListener("click", function (event) {
+      if (!menu.hidden && !wrap.contains(event.target)) setOpen(false);
+    });
+    wrap.append(button, menu);
+    return wrap;
   }
   function renderPage() {
     document.title = game.pageTitle;
@@ -1557,11 +1581,8 @@
     }
     meta.setAttribute("content", game.description);
     var header = i("header");
-    if (game.past && game.currentGame) {
-      header.append(
-        i("div", { class: "past-banner" }, "Past game"),
-      );
-    }
+    header.append(gameMenu());
+    if (game.past) header.append(i("div", { class: "past-banner" }, "Past game"));
     var brand = i("div", { style: "padding:16px 16px 20px" });
     brand.insertAdjacentHTML(
       "beforeend",
@@ -1582,7 +1603,6 @@
     if (game.kickoff) main.append(i("p", { class: "kickoff" }, "Kickoff: " + game.kickoff));
     if (game.schedule) main.append(i("p", { class: "lead" }, game.schedule));
     main.append(i("h1", null, game.heading));
-    main.append(gameMenu());
     if (game.locationPlacement === "top") {
       var top = i("div", { class: "location-top", id: "location" });
       top.append(i("p", { class: "kicker" }, "Location"));

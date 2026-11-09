@@ -54,15 +54,17 @@ assert.ok(alabama.items.some((item) => item.id === "cheese-slices"));
 assert.ok(!lsu.items.some((item) => item.id === "high-noons" || item.id === "beer"));
 
 assert.strictEqual(
-  JSON.stringify(lsu.pastGames.map((link) => link.href)),
-  JSON.stringify(["kentucky/", "alabama/"]),
+  JSON.stringify(lsu.gamesMenu.map((link) => link.label)),
+  JSON.stringify(["LSU", "Kentucky", "Alabama"]),
 );
-assert.strictEqual(kentucky.currentGame.href, "../");
-assert.ok(kentucky.pastGames.some((link) => link.href === "../alabama/" && !link.current));
-assert.ok(kentucky.pastGames.some((link) => link.current && link.label === "Kentucky"));
-assert.strictEqual(alabama.currentGame.href, "../");
-assert.ok(alabama.pastGames.some((link) => link.href === "../kentucky/"));
-assert.ok(!lsu.currentGame);
+assert.strictEqual(lsu.gamesMenu[0].href, "./");
+assert.strictEqual(lsu.gamesMenu[0].current, true);
+assert.ok(kentucky.gamesMenu.some((link) => link.label === "LSU" && link.href === "../" && !link.current));
+assert.ok(kentucky.gamesMenu.some((link) => link.label === "Kentucky" && link.current));
+assert.ok(alabama.gamesMenu.some((link) => link.label === "Alabama" && link.current && link.href === "../alabama/"));
+assert.ok(!lsu.pastGames && !kentucky.pastGames && !alabama.pastGames);
+assert.ok(!appSource.includes("past-games"));
+assert.ok(appSource.includes('aria-label": "Games"'));
 
 assert.ok(appSource.includes("This game is pointed at the Kentucky list."));
 assert.ok(appSource.includes("This game is pointed at the Alabama list."));

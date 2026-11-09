@@ -3,7 +3,19 @@
 html { scroll-behavior: auto; }
 body { margin: 0; background: #fff; color: #171717; font-family: "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.35; }
 .checkerboard { height: 64px; background-color: #ff8200; background-image: linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%), linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%); background-size: 32px 32px; background-position: 0 0, 16px 16px; }
-header { text-align: center; }
+header { position: relative; text-align: center; }
+.game-nav { position: absolute; top: 8px; right: 8px; z-index: 20; }
+.menu-button { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 0; border-radius: 8px; background: #171717; color: #fff; cursor: pointer; }
+.menu-icon { display: block; width: 20px; height: 2px; background: #fff; position: relative; }
+.menu-icon::before, .menu-icon::after { content: ""; position: absolute; left: 0; width: 20px; height: 2px; background: #fff; }
+.menu-icon::before { top: -6px; }
+.menu-icon::after { top: 6px; }
+.menu-button:focus-visible, .game-menu a:focus-visible { outline: 3px solid #ff8200; outline-offset: 2px; }
+.game-menu { position: absolute; top: 52px; right: 0; min-width: 12.5rem; margin: 0; padding: 8px; background: #171717; color: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
+.game-menu[hidden] { display: none; }
+.game-menu ul { list-style: none; margin: 0; padding: 0; }
+.game-menu a { display: flex; align-items: center; min-height: 48px; padding: 0 12px; border-radius: 6px; color: #fff; font-weight: 800; font-size: 1.125rem; text-decoration: none; }
+.game-menu a[aria-current="page"] { background: #ff8200; color: #171717; }
 .past-banner { background: #171717; color: #fff; text-align: center; padding: 10px 16px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-size: .95rem; }
 .past-banner a { color: #ff8200; margin-left: 10px; letter-spacing: 0; text-transform: none; font-weight: 700; }
 .celebration { margin: 14px auto 0; max-width: 28rem; color: #ff8200; font-weight: 900; letter-spacing: .03em; text-transform: uppercase; font-size: clamp(1.05rem, 4.8vw, 1.45rem); line-height: 1.15; }
@@ -20,18 +32,6 @@ h3 { font-size: 1.25rem; margin: 0; }
 .hint { color: #262626; margin: 8px 0 0; }
 .kicker { margin: 12px 0 0; font-weight: 650; }
 .site-link { margin: 16px 0 0; font-weight: 700; font-size: 1.125rem; }
-.site-nav { margin: 16px 0 0; }
-.current-game, .past-games summary, .past-games a { display: flex; align-items: center; min-height: 48px; font-weight: 800; font-size: 1.125rem; }
-.current-game { text-decoration: underline; }
-.past-games { border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; }
-.past-games summary { padding: 0 12px; cursor: pointer; list-style: none; }
-.past-games summary::-webkit-details-marker { display: none; }
-.past-games summary::after { content: "+"; margin-left: auto; font-size: 1.5rem; font-weight: 800; }
-.past-games[open] summary::after { content: "−"; }
-.past-games summary:focus-visible, .past-games a:focus-visible, .current-game:focus-visible { outline: 3px solid #171717; outline-offset: 2px; }
-.past-games ul { list-style: none; margin: 0; padding: 0 12px 8px; }
-.past-games a { text-decoration: underline; }
-.past-games a[aria-current="page"] { color: #ff8200; }
 .gallery, .post-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .shot, .file-tile, .post { border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; overflow: hidden; }
 .shot img, .shot video { display: block; width: 100%; max-height: 240px; object-fit: contain; background: #171717; }

@@ -92,8 +92,8 @@
       locationPlacement: "accordion",
       seedAttendees: true,
       past: true,
-      currentGame: { href: "../", label: "Current game" },
-      pastGames: [
+      gamesMenu: [
+        { href: "../", label: "LSU" },
         { href: "../kentucky/", label: "Kentucky" },
         { href: "../alabama/", label: "Alabama", current: true },
       ],
@@ -142,8 +142,8 @@
       locationPlacement: "top",
       seedAttendees: false,
       past: true,
-      currentGame: { href: "../", label: "Current game" },
-      pastGames: [
+      gamesMenu: [
+        { href: "../", label: "LSU" },
         { href: "../kentucky/", label: "Kentucky", current: true },
         { href: "../alabama/", label: "Alabama" },
       ],
@@ -174,7 +174,8 @@
       locationPlacement: "top",
       seedAttendees: false,
       past: false,
-      pastGames: [
+      gamesMenu: [
+        { href: "./", label: "LSU", current: true },
         { href: "kentucky/", label: "Kentucky" },
         { href: "alabama/", label: "Alabama" },
       ],
