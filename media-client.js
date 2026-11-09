@@ -395,7 +395,6 @@
 
   function ownerTools(after) {
     var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Owner key" });
-    input.value = ownerToken();
     var form = el("form", { class: "stack" },
       el("p", { class: "hint" }, "Owner key removes messages or files. Guests do not get this."),
       input,
@@ -403,10 +402,87 @@
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      try { sessionStorage.setItem(ownerKey, input.value.trim()); } catch (err) {}
+      var next = input.value.trim();
+      if (next) {
+        try { sessionStorage.setItem(ownerKey, next); } catch (err) {}
+      }
+      input.value = "";
       if (after) after();
     });
-    return el("details", null, el("summary", null, "Owner tools"), form);
+    var details = el("details", null, el("summary", null, "Owner tools"), form);
+    var move = moveControls();
+    if (move) details.append(move);
+    return details;
+  }
+
+  function moveControls() {
+    if (gameId !== "lsu") return null;
+    var status = el("p", { class: "hint", role: "status" });
+    var review = el("button", { type: "button", class: "btn ghost" }, "Review move to Kentucky");
+    var go = el("button", { type: "button", class: "btn" }, "Move to Kentucky");
+    go.hidden = true;
+    function extra() {
+      var headers = { "x-owner-token": ownerToken() };
+      try {
+        var lock = sessionStorage.getItem("tailgate-move-lock-lsu") || "";
+        if (lock) headers["x-move-lock"] = lock;
+      } catch (err) {}
+      return headers;
+    }
+    function show(body) {
+      if (!body) { status.textContent = "Could not review the move."; return; }
+      if (body.phase === "done") {
+        status.textContent = "Move finished. " + body.files + " files and " + body.posts + " messages are on Kentucky.";
+        go.hidden = true;
+        return;
+      }
+      if (body.error && body.files == null) {
+        status.textContent = body.error;
+        return;
+      }
+      var moving = body.phase === "copy" || body.phase === "delete";
+      go.textContent = moving ? "Continue move" : "Move to Kentucky";
+      var text = "From LSU to Kentucky: " + body.files + " files, " + body.bytes + " bytes, " + body.posts + " messages, " + body.replies + " replies. " + (body.note || "");
+      if (body.total) text += " " + body.copied + " copied and " + body.removed + " originals removed, of " + body.total + ".";
+      if (body.error) text += " " + body.error;
+      status.textContent = text;
+    }
+    function remember(body) {
+      if (!body || !body.lockId) return;
+      try { sessionStorage.setItem("tailgate-move-lock-lsu", body.lockId); } catch (err) {}
+    }
+    review.addEventListener("click", function () {
+      fetch(api + "/v1/lsu/move-to-kentucky", { headers: guestHeaders(extra()) })
+        .then(function (response) { return response.json(); })
+        .then(function (body) { show(body); go.hidden = false; })
+        .catch(function () { status.textContent = "Could not review the move."; });
+    });
+    function run(step) {
+      fetch(api + "/v1/lsu/move-to-kentucky", {
+        method: "POST",
+        headers: guestHeaders(Object.assign({ "content-type": "application/json" }, extra())),
+        body: JSON.stringify({ confirm: "MOVE TO KENTUCKY", step: step }),
+      }).then(function (response) { return response.json().then(function (body) { return { ok: response.ok, body: body }; }); })
+        .then(function (result) {
+          remember(result.body);
+          show(result.body);
+          if (result.ok && result.body.phase !== "done") return run("continue");
+          go.disabled = false;
+        })
+        .catch(function () {
+          go.disabled = false;
+          status.textContent = "The move paused. Review it again and continue. Originals stay until the copies are checked.";
+        });
+    }
+    go.addEventListener("click", function () {
+      var question = "Move the LSU photos, videos, and messages to Kentucky? Originals are removed only after each copy is checked.";
+      if (!window.confirm(question)) return;
+      go.disabled = true;
+      run("start");
+    });
+    return el("div", { class: "move-panel" },
+      el("p", { class: "hint" }, "Move the existing LSU photos, videos, and messages to Kentucky."),
+      review, status, go);
   }
 
   function loadFiles() {
