@@ -36,15 +36,31 @@ assert.ok(!lsu.foodNote.includes("Ordered for 20"));
 assert.ok(!/not confirmed|order placed|cater/i.test(lsu.foodNote));
 assert.ok(!/teriyaki|1:15-2:15|feeds 20|High Noon|Nutrl|twelve-pack/i.test(lsu.foodNote));
 assert.strictEqual(
-  JSON.stringify(lsu.items.map((item) => [item.name, item.target, item.section])),
+  JSON.stringify(lsu.items.map((item) => [item.id, item.target, item.section])),
   JSON.stringify([
-    ["Mustard bottles", null, "food"],
-    ["Golf balls", null, "food"],
+    ["cheese-slices", null, "food"],
+    ["red-bull", 6, "drink"],
+    ["orange-vodka", 1, "drink"],
+    ["vodka", 1, "drink"],
+    ["champagne", 4, "drink"],
+    ["dolly-shots", 1, "drink"],
+    ["hard-mountain-dew", 2, "drink"],
+    ["diet-soda", 12, "drink"],
+    ["regular-soda", 12, "drink"],
+    ["water", 2, "drink"],
+    ["pineapple-juice", 1, "drink"],
+    ["cranberry-juice", 1, "drink"],
+    ["mustard-bottles", null, "food"],
+    ["golf-balls", 5, "other"],
+    ["funny-kiffin-sign", null, "other"],
   ]),
 );
-assert.ok(!lsu.covered.some((item) => /mustard|golf/i.test(item.name)));
-assert.ok(!kentucky.items.some((item) => item.id === "mustard-bottles" || item.id === "golf-balls"));
-assert.ok(!alabama.items.some((item) => item.id === "mustard-bottles" || item.id === "golf-balls"));
+assert.ok(!lsu.items.some((item) => item.id === "beer" || item.id === "high-noons" || item.id === "nutrl"));
+assert.strictEqual(lsu.items.find((item) => item.id === "dolly-shots").hint, "For Megan");
+assert.strictEqual(lsu.items.find((item) => item.id === "cheese-slices").hint, "For burgers");
+assert.ok(!lsu.covered.some((item) => /mustard|golf|kiffin/i.test(item.name)));
+assert.ok(!kentucky.items.some((item) => item.section === "other"));
+assert.ok(!alabama.items.some((item) => item.section === "other"));
 assert.strictEqual(
   JSON.stringify(lsu.covered.map((item) => item.name)),
   JSON.stringify(["Beer", "Seltzer", "Jack Fire"]),

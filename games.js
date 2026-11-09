@@ -164,10 +164,13 @@
       heading: "Tennessee vs LSU, Neyland Stadium",
       leads: LEADS,
       foodNote: "Menu: " + MENU,
-      items: [
+      items: ITEMS.filter(function (item) {
+        return item.id !== "beer" && item.id !== "high-noons" && item.id !== "nutrl";
+      }).concat([
         { id: "mustard-bottles", name: "Mustard bottles", singular: "bottle", plural: "bottles", target: null, hint: "", countHint: "Count bottles.", section: "food" },
-        { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: null, hint: "", countHint: "Count balls.", section: "food" },
-      ],
+        { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: 5, hint: "", countHint: "Count balls.", section: "other" },
+        { id: "funny-kiffin-sign", name: "Funny Kiffin sign", singular: "sign", plural: "signs", target: null, hint: "", countHint: "Count signs.", section: "other" },
+      ]),
       covered: [
         { name: "Beer", detail: "24 individual drinks. Brand and pack size are not set." },
         { name: "Seltzer", detail: "24 individual drinks. Not a specific brand." },
