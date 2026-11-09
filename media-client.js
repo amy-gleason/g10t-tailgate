@@ -40,8 +40,10 @@
 
   var pinKey = "tailgate-media-pin-" + gameId;
   var ownerKey = "tailgate-owner-key-" + gameId;
+  var ownerMemory = "";
   var pin = "";
   try { pin = sessionStorage.getItem(pinKey) || ""; } catch (error) { pin = ""; }
+  try { ownerMemory = sessionStorage.getItem(ownerKey) || ""; } catch (error) { ownerMemory = ""; }
 
   function guestHeaders(extra) {
     var headers = { "x-guest-pin": pin };
@@ -49,7 +51,12 @@
     return headers;
   }
   function ownerToken() {
+    if (ownerMemory) return ownerMemory;
     try { return sessionStorage.getItem(ownerKey) || ""; } catch (error) { return ""; }
+  }
+  function saveOwnerToken(value) {
+    ownerMemory = value;
+    try { sessionStorage.setItem(ownerKey, value); } catch (err) {}
   }
   function sizeLabel(bytes) {
     if (bytes < 1024) return bytes + " B";
@@ -217,7 +224,7 @@
       var removeFile = el("button", { type: "button", class: "btn ghost" }, "Remove file");
       removeFile.addEventListener("click", function () {
         fetch(api + "/v1/" + gameId + "/files/" + file.id, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
-          .then(function () { loadFiles(); });
+          .then(function (response) { if (response.ok) loadFiles(); });
       });
       meta.append(removeFile);
     }
@@ -270,7 +277,7 @@
       form
     );
     if (batchHost) photos.append(batchHost);
-    photos.append(list, ownerTools(function () { return loadFiles(); }));
+    photos.append(list, ownerTools());
   }
 
   var POST_LIMIT = 5000;
@@ -371,7 +378,7 @@
             fetch(api + "/v1/" + gameId + "/posts/" + post.id + "/replies/" + reply.id, {
               method: "DELETE",
               headers: guestHeaders({ "x-owner-token": ownerToken() }),
-            }).then(function () { loadPosts(); });
+            }).then(function (response) { if (response.ok) loadPosts(); });
           });
           replyBlock.append(removeReply);
         }
@@ -382,7 +389,7 @@
         var remove = el("button", { type: "button", class: "btn ghost" }, "Remove message");
         remove.addEventListener("click", function () {
           fetch(api + "/v1/" + gameId + "/posts/" + post.id, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
-            .then(function () { loadPosts(); });
+            .then(function (response) { if (response.ok) loadPosts(); });
         });
         block.append(remove);
       }
@@ -390,24 +397,33 @@
     });
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
     refresh.addEventListener("click", loadPosts);
-    posts.replaceChildren(form, refresh, list, ownerTools(loadPosts));
+    posts.replaceChildren(form, refresh, list, ownerTools());
   }
 
-  function ownerTools(after) {
-    var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Owner key" });
+  function ownerTools() {
+    var input = el("input", {
+      class: "input",
+      type: "password",
+      autocomplete: "off",
+      autocapitalize: "off",
+      autocorrect: "off",
+      spellcheck: "false",
+      placeholder: "Owner key",
+    });
+    var saved = el("p", { class: "hint", role: "status" });
     var form = el("form", { class: "stack" },
       el("p", { class: "hint" }, "Owner key removes messages or files. Guests do not get this."),
       input,
-      el("button", { type: "submit", class: "btn ghost" }, "Save owner key on this phone")
+      el("button", { type: "submit", class: "btn ghost" }, "Save owner key on this phone"),
+      saved
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       var next = input.value.trim();
-      if (next) {
-        try { sessionStorage.setItem(ownerKey, next); } catch (err) {}
-      }
+      if (!next) return;
+      saveOwnerToken(next);
       input.value = "";
-      if (after) after();
+      saved.textContent = "Owner key saved on this phone";
     });
     var details = el("details", null, el("summary", null, "Owner tools"), form);
     var move = moveControls();
@@ -451,7 +467,13 @@
       if (!body || !body.lockId) return;
       try { sessionStorage.setItem("tailgate-move-lock-lsu", body.lockId); } catch (err) {}
     }
+    function requireOwner() {
+      if (ownerToken()) return true;
+      status.textContent = "Enter and save your owner key first";
+      return false;
+    }
     review.addEventListener("click", function () {
+      if (!requireOwner()) return;
       fetch(api + "/v1/lsu/move-to-kentucky", { headers: guestHeaders(extra()) })
         .then(function (response) { return response.json(); })
         .then(function (body) { show(body); go.hidden = false; })
@@ -475,6 +497,7 @@
         });
     }
     go.addEventListener("click", function () {
+      if (!requireOwner()) return;
       var question = "Move the LSU photos, videos, and messages to Kentucky? Originals are removed only after each copy is checked.";
       if (!window.confirm(question)) return;
       go.disabled = true;
