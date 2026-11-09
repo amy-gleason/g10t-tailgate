@@ -55,6 +55,9 @@ assert.ok(!/high noon|nutrl|twelve-pack|brand/i.test(lsu.covered[1].detail) || /
 assert.ok(/not set/i.test(lsu.covered[2].detail));
 assert.strictEqual(lsu.celebration, "(also Amy\u2019s 55th birthday)");
 assert.strictEqual(lsu.banner, "Tennessee vs LSU");
+assert.strictEqual(lsu.location.title, "Smokey Blue Lawn, space SB10");
+assert.ok(!lsu.location.status);
+assert.strictEqual(kentucky.location.status, "confirm");
 assert.ok(!kentucky.celebration && !alabama.celebration);
 assert.strictEqual(lsu.seedAttendees, false);
 assert.strictEqual(lsu.media, true);

@@ -173,7 +173,7 @@
         { name: "Seltzer", detail: "24 individual drinks. Not a specific brand." },
         { name: "Jack Fire", detail: "Already covered. Amount is not set." },
       ],
-      location: locationFor("confirm"),
+      location: locationFor(),
       locationPlacement: "top",
       seedAttendees: false,
       past: false,
