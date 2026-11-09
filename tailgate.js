@@ -1588,11 +1588,9 @@
       "beforeend",
       '<svg viewBox="0 0 168 148" width="92" height="80" aria-hidden="true"><path fill="#FF8200" d="M8 6h152v40H104v94H64V46H8V6z"/></svg>',
     );
+    brand.append(i("p", { class: "banner" }, game.banner));
     if (game.celebration) brand.append(i("p", { class: "celebration" }, game.celebration));
-    brand.append(
-      i("p", { class: "banner" }, game.banner),
-      i("div", { class: "stripe", "aria-hidden": "true" }),
-    );
+    brand.append(i("div", { class: "stripe", "aria-hidden": "true" }));
     header.append(
       i("div", { class: "checkerboard", "aria-hidden": "true" }),
       brand,

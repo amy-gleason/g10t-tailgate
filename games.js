@@ -154,10 +154,10 @@
       id: "lsu",
       telegraphPath: "G10T-tailgate-LSU-11-08",
       telegraphTitle: "G10T tailgate LSU",
-      pageTitle: "Amy's 55th Birthday · Tennessee vs LSU",
+      pageTitle: "Tennessee vs LSU",
       description:
         "Signup list for Amy's 55th birthday and Tennessee vs LSU at Neyland Stadium, Saturday, November 21, 2026.",
-      celebration: "Amy's 55th Birthday Celebration",
+      celebration: "(also Amy\u2019s 55th birthday)",
       banner: "Tennessee vs LSU",
       date: "Saturday, November 21, 2026",
       kickoff: "TBD",
