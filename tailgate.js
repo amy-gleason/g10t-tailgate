@@ -1222,6 +1222,7 @@
       n = document.querySelector("#alert"),
       r = document.querySelector("#coming"),
       o = document.querySelector("#food-body"),
+      otherBody = document.querySelector("#other-body"),
       a = document.querySelector("#drinks-body"),
       u = document.querySelector("#donations-body");
     if (!t || !n || !r || !o || !a || !u) return;
@@ -1252,6 +1253,7 @@
         ),
       ),
         o.replaceChildren(),
+        otherBody && otherBody.replaceChildren(),
         a.replaceChildren(),
         u.replaceChildren());
       return;
@@ -1338,6 +1340,12 @@
         "Bringing other food? Add it in your own words.",
       ),
     ),
+      otherBody &&
+        otherBody.replaceChildren(
+          ...H()
+            .filter((c) => c.section === "other")
+            .map(W),
+        ),
       a.replaceChildren(
         ...[
           coveredList(),
@@ -1616,9 +1624,14 @@
     var specs = [
       ["coming", "Who's coming", true, []],
       ["food", "Food list", false, [i("div", { id: "food-body" })]],
+    ];
+    if ((game.items || []).some((item) => item.section === "other")) {
+      specs.push(["other", "Other items", false, [i("div", { id: "other-body" })]]);
+    }
+    specs.push(
       ["drinks", "Drink list", false, [i("div", { id: "drinks-body" })]],
       ["donations", "Donations (optional)", false, [i("div", { id: "donations-body" })]],
-    ];
+    );
     if (game.media) {
       specs.push(["photos", "Photos & videos", false, [i("div", { id: "photos-body" })]]);
       specs.push(["posts", "Messages", false, [i("div", { id: "posts-body" })]]);

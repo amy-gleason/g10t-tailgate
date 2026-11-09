@@ -166,7 +166,8 @@
       foodNote: "Menu: " + MENU,
       items: [
         { id: "mustard-bottles", name: "Mustard bottles", singular: "bottle", plural: "bottles", target: null, hint: "", countHint: "Count bottles.", section: "food" },
-        { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: null, hint: "", countHint: "Count balls.", section: "food" },
+        { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: 5, hint: "", countHint: "Count balls.", section: "other" },
+        { id: "funny-kiffin-sign", name: "Funny Kiffin sign", singular: "sign", plural: "signs", target: null, hint: "", countHint: "Count signs.", section: "other" },
       ],
       covered: [
         { name: "Beer", detail: "24 individual drinks. Brand and pack size are not set." },

@@ -39,12 +39,13 @@ assert.strictEqual(
   JSON.stringify(lsu.items.map((item) => [item.name, item.target, item.section])),
   JSON.stringify([
     ["Mustard bottles", null, "food"],
-    ["Golf balls", null, "food"],
+    ["Golf balls", 5, "other"],
+    ["Funny Kiffin sign", null, "other"],
   ]),
 );
-assert.ok(!lsu.covered.some((item) => /mustard|golf/i.test(item.name)));
-assert.ok(!kentucky.items.some((item) => item.id === "mustard-bottles" || item.id === "golf-balls"));
-assert.ok(!alabama.items.some((item) => item.id === "mustard-bottles" || item.id === "golf-balls"));
+assert.ok(!lsu.covered.some((item) => /mustard|golf|kiffin/i.test(item.name)));
+assert.ok(!kentucky.items.some((item) => item.section === "other"));
+assert.ok(!alabama.items.some((item) => item.section === "other"));
 assert.strictEqual(
   JSON.stringify(lsu.covered.map((item) => item.name)),
   JSON.stringify(["Beer", "Seltzer", "Jack Fire"]),
