@@ -20,6 +20,18 @@ h3 { font-size: 1.25rem; margin: 0; }
 .hint { color: #262626; margin: 8px 0 0; }
 .kicker { margin: 12px 0 0; font-weight: 650; }
 .site-link { margin: 16px 0 0; font-weight: 700; font-size: 1.125rem; }
+.site-nav { margin: 16px 0 0; }
+.current-game, .past-games summary, .past-games a { display: flex; align-items: center; min-height: 48px; font-weight: 800; font-size: 1.125rem; }
+.current-game { text-decoration: underline; }
+.past-games { border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; }
+.past-games summary { padding: 0 12px; cursor: pointer; list-style: none; }
+.past-games summary::-webkit-details-marker { display: none; }
+.past-games summary::after { content: "+"; margin-left: auto; font-size: 1.5rem; font-weight: 800; }
+.past-games[open] summary::after { content: "−"; }
+.past-games summary:focus-visible, .past-games a:focus-visible, .current-game:focus-visible { outline: 3px solid #171717; outline-offset: 2px; }
+.past-games ul { list-style: none; margin: 0; padding: 0 12px 8px; }
+.past-games a { text-decoration: underline; }
+.past-games a[aria-current="page"] { color: #ff8200; }
 .gallery, .post-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .shot, .file-tile, .post { border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; overflow: hidden; }
 .shot img, .shot video { display: block; width: 100%; max-height: 240px; object-fit: contain; background: #171717; }

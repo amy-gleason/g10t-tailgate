@@ -1528,6 +1528,25 @@
     );
     return section;
   }
+  function gameMenu() {
+    var nav = i("nav", { class: "site-nav", "aria-label": "Games" });
+    if (game.past && game.currentGame) {
+      nav.append(i("a", { class: "current-game", href: game.currentGame.href }, game.currentGame.label));
+    }
+    var games = game.pastGames || [];
+    if (!games.length) return nav;
+    var details = i("details", { class: "past-games" });
+    details.append(i("summary", null, "Past games"));
+    var list = i("ul");
+    games.forEach((link) => {
+      var attrs = { href: link.href };
+      if (link.current) attrs["aria-current"] = "page";
+      list.append(i("li", null, i("a", attrs, link.label)));
+    });
+    details.append(list);
+    nav.append(details);
+    return nav;
+  }
   function renderPage() {
     document.title = game.pageTitle;
     var meta = document.querySelector('meta[name="description"]');
@@ -1540,12 +1559,7 @@
     var header = i("header");
     if (game.past && game.currentGame) {
       header.append(
-        i(
-          "div",
-          { class: "past-banner" },
-          "Past game",
-          i("a", { href: game.currentGame.href }, game.currentGame.label),
-        ),
+        i("div", { class: "past-banner" }, "Past game"),
       );
     }
     var brand = i("div", { style: "padding:16px 16px 20px" });
@@ -1568,23 +1582,7 @@
     if (game.kickoff) main.append(i("p", { class: "kickoff" }, "Kickoff: " + game.kickoff));
     if (game.schedule) main.append(i("p", { class: "lead" }, game.schedule));
     main.append(i("h1", null, game.heading));
-    if (game.nav && game.nav.length) {
-      var nav = i("p", { class: "site-link" });
-      if (game.navLabel) nav.append(document.createTextNode(game.navLabel + " "));
-      game.nav.forEach((link, index) => {
-        if (index) nav.append(document.createTextNode(" · "));
-        nav.append(i("a", { href: link.href }, link.label));
-      });
-      main.append(nav);
-    } else if (game.pastTailgates) {
-      main.append(
-        i(
-          "p",
-          { class: "site-link" },
-          i("a", { href: game.pastTailgates.href }, game.pastTailgates.label),
-        ),
-      );
-    }
+    main.append(gameMenu());
     if (game.locationPlacement === "top") {
       var top = i("div", { class: "location-top", id: "location" });
       top.append(i("p", { class: "kicker" }, "Location"));
