@@ -51,6 +51,18 @@
   function ownerToken() {
     try { return sessionStorage.getItem(ownerKey) || ""; } catch (error) { return ""; }
   }
+  function browserUploaderId() {
+    var key = "tailgate-uploader-" + gameId;
+    try {
+      var existing = localStorage.getItem(key) || "";
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing)) return existing;
+      var created = crypto.randomUUID();
+      localStorage.setItem(key, created);
+      return created;
+    } catch (error) {
+      return "";
+    }
+  }
   function sizeLabel(bytes) {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
@@ -133,6 +145,8 @@
         xhr.setRequestHeader("x-guest-pin", pin);
         xhr.setRequestHeader("x-batch-id", batchId);
         xhr.setRequestHeader("x-batch-size", String(batchSize));
+        var browserId = browserUploaderId();
+        if (browserId) xhr.setRequestHeader("x-uploader-id", browserId);
         xhr.upload.onprogress = function (event) {
           if (!event.lengthComputable) return;
           item.meter.style.width = Math.round(event.loaded / event.total * 100) + "%";

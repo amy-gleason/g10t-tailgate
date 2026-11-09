@@ -33,7 +33,7 @@ function corsHeaders(origin, extra) {
   if (allowedOrigin(origin)) {
     headers.set("access-control-allow-origin", origin);
     headers.set("vary", "Origin");
-    headers.set("access-control-allow-headers", "content-type, x-guest-pin, x-owner-token, x-file-name, x-guest-name, x-batch-id, x-batch-size");
+    headers.set("access-control-allow-headers", "content-type, x-guest-pin, x-owner-token, x-file-name, x-guest-name, x-batch-id, x-batch-size, x-uploader-id");
     headers.set("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
   }
   return headers;
@@ -206,6 +206,85 @@ async function claimBatch(env, game, batch) {
   return Boolean(next && next.blocked === false);
 }
 
+function browserUploaderId(request) {
+  const value = String(request.headers.get("x-uploader-id") || "").toLowerCase();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value) ? value : "";
+}
+
+function alertTarget(env) {
+  const token = typeof env.BULK_UPLOAD_ALERT_TOKEN === "string" ? env.BULK_UPLOAD_ALERT_TOKEN.trim() : "";
+  const raw = typeof env.BULK_UPLOAD_ALERT_URL === "string" ? env.BULK_UPLOAD_ALERT_URL.trim() : "";
+  if (!token || !raw) return null;
+  try {
+    const url = new URL(raw);
+    const local = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+    if (url.protocol === "https:" || (url.protocol === "http:" && local)) return { url: url.toString(), token };
+  } catch (error) {
+    return null;
+  }
+  return null;
+}
+
+async function sendBulkAlert(env, event) {
+  const target = alertTarget(env);
+  if (!target || !event || event.delivered) return "skipped";
+  try {
+    const response = await fetch(target.url, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer " + target.token },
+      body: JSON.stringify({
+        eventId: event.eventId,
+        game: event.game,
+        displayName: event.displayName,
+        count: event.count,
+        occurredAt: event.occurredAt,
+      }),
+    });
+    return response.ok ? "sent" : "pending";
+  } catch (error) {
+    return "pending";
+  }
+}
+
+async function noteSuccessfulUpload(env, game, request, displayName) {
+  const uploaderId = browserUploaderId(request);
+  const key = `meta/${game}/upload-streak.json`;
+  const state = await mutateJson(
+    env,
+    key,
+    () => (uploaderId ? { uploaderId, displayName, count: 1, pending: null } : { uploaderId: "", displayName: "", count: 0, pending: null }),
+    (data) => {
+      const pending = data.pending && !data.pending.delivered ? data.pending : null;
+      if (!uploaderId) return { uploaderId: "", displayName: "", count: 0, pending };
+      const same = data.uploaderId === uploaderId && data.displayName === displayName;
+      const count = same ? (Number(data.count) || 0) + 1 : 1;
+      let nextPending = pending;
+      if (count === 200 && !nextPending) {
+        nextPending = {
+          eventId: crypto.randomUUID(),
+          game,
+          displayName,
+          count: 200,
+          occurredAt: new Date().toISOString(),
+          delivered: false,
+        };
+      }
+      return { uploaderId, displayName, count, pending: nextPending };
+    },
+  );
+  if (!state || !state.pending || state.pending.delivered) return;
+  if ((await sendBulkAlert(env, state.pending)) !== "sent") return;
+  await mutateJson(
+    env,
+    key,
+    () => null,
+    (data) => {
+      if (!data.pending || data.pending.eventId !== state.pending.eventId) return data;
+      return { ...data, pending: { ...data.pending, delivered: true } };
+    },
+  );
+}
+
 async function rateAllow(env, game, kind, limit) {
   const key = `meta/${game}/rate.json`;
   const now = Date.now();
@@ -320,6 +399,11 @@ async function handleFiles(request, env, game, origin, id) {
     } catch (error) {
       await releaseSlot(env, game, 1, bytes, 0);
       throw error;
+    }
+    try {
+      await noteSuccessfulUpload(env, game, request, guest);
+    } catch (error) {
+      // The file is already stored. A missing or failed alert must not turn the upload into an error.
     }
     return json({ id: fileId, preview: previewKind(type) }, 201, origin);
   }
