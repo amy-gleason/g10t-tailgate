@@ -198,8 +198,9 @@ test("guest pin, type, size, isolation, preview, and owner delete", async () => 
 async function runFiles(mf) {
   const denied = await call(mf, "/v1/lsu/files", { headers: { "x-guest-pin": "pin-kentucky" } });
   assert.equal(denied.status, 401);
-  const unknown = await call(mf, "/v1/alabama/files", { headers: { "x-guest-pin": "pin-lsu" } });
-  assert.equal(unknown.status, 404);
+  const unconfigured = await call(mf, "/v1/alabama/files", { headers: { "x-guest-pin": "pin-lsu" } });
+  assert.equal(unconfigured.status, 503);
+  assert.equal(unconfigured.payload.error, "Sharing is not configured.");
 
   const upload = await call(mf, "/v1/lsu/files", {
     method: "POST",
@@ -374,6 +375,7 @@ test("health and cors do not leak secrets or allow other sites", async () => {
     assert.equal(health.status, 200);
     assert.equal(health.payload.ok, true);
     assert.equal(health.payload.games.lsu, true);
+    assert.equal(health.payload.games.alabama, false);
     assert.equal(health.payload.owner, true);
     assert.equal(JSON.stringify(health.payload).includes("pin-lsu"), false);
     const open = await call(mf, "/health", { headers: { origin: "https://amy-gleason.github.io" } });

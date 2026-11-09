@@ -1,4 +1,4 @@
-const GAMES = new Set(["lsu", "kentucky"]);
+const GAMES = new Set(["lsu", "kentucky", "alabama"]);
 const PHOTO_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -79,6 +79,7 @@ function num(env, key, fallback) {
 function pinFor(env, game) {
   if (game === "lsu") return env.GUEST_PIN_LSU || "";
   if (game === "kentucky") return env.GUEST_PIN_KENTUCKY || "";
+  if (game === "alabama") return env.GUEST_PIN_ALABAMA || "";
   return "";
 }
 
@@ -448,7 +449,7 @@ export default {
         ok: true,
         uploads: env.UPLOADS_ENABLED === "true",
         posts: env.POSTS_ENABLED === "true",
-        games: { lsu: Boolean(env.GUEST_PIN_LSU), kentucky: Boolean(env.GUEST_PIN_KENTUCKY) },
+        games: { lsu: Boolean(env.GUEST_PIN_LSU), kentucky: Boolean(env.GUEST_PIN_KENTUCKY), alabama: Boolean(env.GUEST_PIN_ALABAMA) },
         owner: Boolean(env.OWNER_TOKEN),
       }, 200, origin);
     }

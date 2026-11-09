@@ -97,6 +97,8 @@
         { href: "../kentucky/", label: "Kentucky" },
         { href: "../alabama/", label: "Alabama", current: true },
       ],
+      media: true,
+      mediaApi: "https://g10t-tailgate-media.g10t-tailgate.workers.dev",
     },
     kentucky: {
       id: "kentucky",
