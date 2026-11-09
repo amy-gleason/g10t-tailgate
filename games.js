@@ -163,7 +163,7 @@
       kickoff: "TBD",
       heading: "Tennessee vs LSU, Neyland Stadium",
       leads: LEADS,
-      foodNote: "Food plan is not confirmed yet. Nothing has been ordered for this game.",
+      foodNote: "Menu: " + MENU,
       items: [
         { id: "mustard-bottles", name: "Mustard bottles", singular: "bottle", plural: "bottles", target: null, hint: "", countHint: "Count bottles.", section: "food" },
         { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: null, hint: "", countHint: "Count balls.", section: "food" },

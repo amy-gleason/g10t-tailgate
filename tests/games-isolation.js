@@ -28,6 +28,12 @@ assert.strictEqual(new Set(paths).size, 3);
 
 assert.strictEqual(lsu.kickoff, "TBD");
 assert.strictEqual(lsu.schedule, undefined);
+assert.strictEqual(
+  lsu.foodNote,
+  "Menu: Hamburgers, Hotdogs, Lettuce, Tomato, Onion & Condiments, Mac N Cheese, Rolls w/ Honey Cinnamon Butter, Assorted Cookies, 1 dozen frosted chocolate chip cookies, Peanuts.",
+);
+assert.ok(!lsu.foodNote.includes("Ordered for 20"));
+assert.ok(!/not confirmed|order placed|cater/i.test(lsu.foodNote));
 assert.ok(!/teriyaki|1:15-2:15|feeds 20|High Noon|Nutrl|twelve-pack/i.test(lsu.foodNote));
 assert.strictEqual(
   JSON.stringify(lsu.items.map((item) => [item.name, item.target, item.section])),
