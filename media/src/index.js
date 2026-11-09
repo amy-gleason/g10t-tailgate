@@ -1,3 +1,5 @@
+import { handleMove, migrationKey, moveBlocksWrites, noteTestNow } from "./move.js";
+
 const GAMES = new Set(["lsu", "kentucky"]);
 const PHOTO_TYPES = new Set([
   "image/jpeg",
@@ -33,7 +35,7 @@ function corsHeaders(origin, extra) {
   if (allowedOrigin(origin)) {
     headers.set("access-control-allow-origin", origin);
     headers.set("vary", "Origin");
-    headers.set("access-control-allow-headers", "content-type, x-guest-pin, x-owner-token, x-file-name, x-guest-name, x-batch-id, x-batch-size");
+    headers.set("access-control-allow-headers", "content-type, x-guest-pin, x-owner-token, x-file-name, x-guest-name, x-batch-id, x-batch-size, x-move-lock");
     headers.set("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
   }
   return headers;
@@ -122,8 +124,12 @@ async function listAll(env, prefix) {
   return objects;
 }
 
-async function mutateJson(env, key, create, change) {
+async function mutateJson(env, key, create, change, allowDuringMove = false) {
   for (let attempt = 0; attempt < 6; attempt++) {
+    if (!allowDuringMove && migrationKey(key)) {
+      const game = key.split("/")[1];
+      if (await moveBlocksWrites(env, game)) return { paused: true };
+    }
     const current = await env.MEDIA.get(key);
     const body = current ? change(await current.json()) : create();
     if (!body) return null;
@@ -158,9 +164,10 @@ async function reserveSlot(env, game, patch, accept) {
         posts: Number(data.posts) || 0,
       };
       const updated = { ...current, ...patch(current) };
-      return accept(updated) ? { ...updated, blocked: false } : { ...current, blocked: true };
+      return accept(updated) ? { ...data, ...updated, blocked: false } : { ...data, ...current, blocked: true };
     },
   );
+  if (next && next.paused) return "paused";
   return Boolean(next && next.blocked === false);
 }
 
@@ -170,11 +177,13 @@ async function releaseSlot(env, game, files, bytes, posts) {
     `meta/${game}/quota.json`,
     () => ({ files: 0, bytes: 0, posts: 0, blocked: false }),
     (data) => ({
+      ...data,
       files: Math.max(0, (Number(data.files) || 0) - files),
       bytes: Math.max(0, (Number(data.bytes) || 0) - bytes),
       posts: Math.max(0, (Number(data.posts) || 0) - posts),
       blocked: false,
     }),
+    true,
   );
 }
 
@@ -213,6 +222,7 @@ async function claimBatch(env, game, batch) {
       return { order, counts, blocked: false };
     },
   );
+  if (next && next.paused) return "paused";
   return Boolean(next && next.blocked === false);
 }
 
@@ -230,7 +240,12 @@ async function rateAllow(env, game, kind, limit) {
       return { ...data, [kind]: bucket.concat(now), blocked: false };
     },
   );
+  if (next && next.paused) return "paused";
   return Boolean(next && next.blocked === false);
+}
+
+function movePaused(origin) {
+  return json({ error: "A move to Kentucky is in progress." }, 409, origin);
 }
 
 function metaValue(meta, key) {
@@ -255,6 +270,9 @@ function fileRecord(object) {
 }
 
 async function handleFiles(request, env, game, origin, id) {
+  if ((request.method === "POST" || request.method === "DELETE") && (await moveBlocksWrites(env, game))) {
+    return json({ error: "A move to Kentucky is in progress." }, 409, origin);
+  }
   if (request.method === "GET" && !id) {
     const objects = await listAll(env, `files/${game}/`);
     const files = [];
@@ -293,8 +311,10 @@ async function handleFiles(request, env, game, origin, id) {
     if (!Number.isInteger(bytes) || bytes < 1 || bytes > max) return json({ error: "That file is empty or too large." }, 413, origin);
     const batch = batchRequest(request);
     if (batch.error) return json({ error: batch.error }, 400, origin);
-    if (!batch.legacy && !(await claimBatch(env, game, batch))) {
-      return json({ error: "That batch is already full. Retry only the files that did not upload." }, 400, origin);
+    if (!batch.legacy) {
+      const claimed = await claimBatch(env, game, batch);
+      if (claimed === "paused") return movePaused(origin);
+      if (!claimed) return json({ error: "That batch is already full. Retry only the files that did not upload." }, 400, origin);
     }
     const maxFiles = num(env, "MAX_GAME_FILES", 200);
     const maxBytes = num(env, "MAX_GAME_BYTES", 2147483648);
@@ -304,7 +324,12 @@ async function handleFiles(request, env, game, origin, id) {
       (current) => ({ files: current.files + 1, bytes: current.bytes + bytes }),
       (next) => next.files <= maxFiles && next.bytes <= maxBytes,
     );
+    if (reserved === "paused") return movePaused(origin);
     if (!reserved) return json({ error: "This game's storage is full." }, 413, origin);
+    if (await moveBlocksWrites(env, game)) {
+      await releaseSlot(env, game, 1, bytes, 0);
+      return movePaused(origin);
+    }
     const fileId = crypto.randomUUID();
     const key = `files/${game}/${fileId}`;
     let stored = null;
@@ -337,6 +362,7 @@ async function handleFiles(request, env, game, origin, id) {
     if (!safeId(id)) return json({ error: "That file is gone." }, 404, origin);
     const owner = authorizedOwner(request, env);
     if (owner !== "ok") return json({ error: owner === "unconfigured" ? "Removal is not configured." : "Owner key was not accepted." }, owner === "unconfigured" ? 503 : 401, origin);
+    if (await moveBlocksWrites(env, game)) return movePaused(origin);
     const key = `files/${game}/${id}`;
     const head = await env.MEDIA.head(key);
     await env.MEDIA.delete(key);
@@ -347,6 +373,9 @@ async function handleFiles(request, env, game, origin, id) {
 }
 
 async function handlePosts(request, env, game, origin, id, replyId) {
+  if ((request.method === "POST" || request.method === "DELETE") && (await moveBlocksWrites(env, game))) {
+    return json({ error: "A move to Kentucky is in progress." }, 409, origin);
+  }
   if (request.method === "GET" && !id) {
     const objects = await listAll(env, `posts/${game}/`);
     const posts = [];
@@ -365,7 +394,9 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     if (!name || !body.text) return json({ error: "Enter your name and a message." }, 400, origin);
     if (body.tooLong) return json({ error: "That message is longer than 5000 characters." }, 400, origin);
     const text = body.text;
-    if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
+    const allowed = await rateAllow(env, game, "posts", 12);
+    if (allowed === "paused") return movePaused(origin);
+    if (!allowed) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const maxPosts = num(env, "MAX_POSTS", 500);
     const reserved = await reserveSlot(
       env,
@@ -373,7 +404,12 @@ async function handlePosts(request, env, game, origin, id, replyId) {
       (current) => ({ posts: current.posts + 1 }),
       (next) => next.posts <= maxPosts,
     );
+    if (reserved === "paused") return movePaused(origin);
     if (!reserved) return json({ error: "The board is full." }, 413, origin);
+    if (await moveBlocksWrites(env, game)) {
+      await releaseSlot(env, game, 0, 0, 1);
+      return movePaused(origin);
+    }
     const post = { id: crypto.randomUUID(), name, text, createdAt: new Date().toISOString(), replies: [] };
     let stored = null;
     try {
@@ -381,6 +417,10 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     } catch (error) {
       await releaseSlot(env, game, 0, 0, 1);
       throw error;
+    }
+    if (stored && stored.paused) {
+      await releaseSlot(env, game, 0, 0, 1);
+      return movePaused(origin);
     }
     if (!stored) {
       await releaseSlot(env, game, 0, 0, 1);
@@ -396,7 +436,9 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     if (!name || !body.text) return json({ error: "Enter your name and a reply." }, 400, origin);
     if (body.tooLong) return json({ error: "That reply is longer than 1000 characters." }, 400, origin);
     const text = body.text;
-    if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
+    const allowed = await rateAllow(env, game, "posts", 12);
+    if (allowed === "paused") return movePaused(origin);
+    if (!allowed) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const key = `posts/${game}/${id}.json`;
     const stored = await mutateJson(
       env,
@@ -413,6 +455,7 @@ async function handlePosts(request, env, game, origin, id, replyId) {
         };
       },
     );
+    if (stored && stored.paused) return movePaused(origin);
     if (!stored) return json({ error: "That message is gone." }, 404, origin);
     if (stored.blocked) return json({ error: "That message has too many replies." }, 413, origin);
     return json({ post: stored }, 201, origin);
@@ -421,6 +464,7 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     if (!safeId(id) || (replyId && !safeId(replyId))) return json({ error: "That message is gone." }, 404, origin);
     const owner = authorizedOwner(request, env);
     if (owner !== "ok") return json({ error: owner === "unconfigured" ? "Removal is not configured." : "Owner key was not accepted." }, owner === "unconfigured" ? 503 : 401, origin);
+    if (await moveBlocksWrites(env, game)) return movePaused(origin);
     if (replyId) {
       const stored = await mutateJson(
         env,
@@ -428,6 +472,7 @@ async function handlePosts(request, env, game, origin, id, replyId) {
         () => null,
         (post) => (post ? { ...post, replies: (post.replies || []).filter((reply) => reply.id !== replyId) } : null),
       );
+      if (stored && stored.paused) return movePaused(origin);
       if (!stored) return json({ error: "That message is gone." }, 404, origin);
       return json({ post: stored }, 200, origin);
     }
@@ -440,6 +485,7 @@ async function handlePosts(request, env, game, origin, id, replyId) {
 
 export default {
   async fetch(request, env) {
+    noteTestNow(env, request);
     const origin = request.headers.get("origin") || "";
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin) });
     const url = new URL(request.url);
@@ -459,6 +505,12 @@ export default {
     if (guest === "unconfigured") return json({ error: "Sharing is not configured." }, 503, origin);
     if (guest !== "ok") return json({ error: "Guest code was not accepted." }, 401, origin);
     try {
+      if (parts[2] === "move-to-kentucky") {
+        if (game !== "lsu") return json({ error: "That action is not supported." }, 404, origin);
+        const owner = authorizedOwner(request, env);
+        if (owner !== "ok") return json({ error: owner === "unconfigured" ? "Removal is not configured." : "Owner key was not accepted." }, owner === "unconfigured" ? 503 : 401, origin);
+        return await handleMove(request, env, origin, json);
+      }
       if (parts[2] === "files") return await handleFiles(request, env, game, origin, parts[3]);
       if (parts[2] === "posts") return await handlePosts(request, env, game, origin, parts[3], parts[5]);
       return json({ error: "Unknown game." }, 404, origin);
