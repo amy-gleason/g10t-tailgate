@@ -92,7 +92,11 @@
       locationPlacement: "accordion",
       seedAttendees: true,
       past: true,
-      currentGame: { href: "../", label: "Current game" },
+      gamesMenu: [
+        { href: "../", label: "LSU" },
+        { href: "../kentucky/", label: "Kentucky" },
+        { href: "../alabama/", label: "Alabama", current: true },
+      ],
     },
     kentucky: {
       id: "kentucky",
@@ -137,8 +141,49 @@
       location: locationFor("confirm"),
       locationPlacement: "top",
       seedAttendees: false,
+      past: true,
+      gamesMenu: [
+        { href: "../", label: "LSU" },
+        { href: "../kentucky/", label: "Kentucky", current: true },
+        { href: "../alabama/", label: "Alabama" },
+      ],
+      media: true,
+      mediaApi: "https://g10t-tailgate-media.g10t-tailgate.workers.dev",
+    },
+    lsu: {
+      id: "lsu",
+      telegraphPath: "G10T-tailgate-LSU-11-08",
+      telegraphTitle: "G10T tailgate LSU",
+      pageTitle: "Tennessee vs LSU",
+      description:
+        "Signup list for Amy's 55th birthday and Tennessee vs LSU at Neyland Stadium, Saturday, November 21, 2026.",
+      celebration: "(also Amy\u2019s 55th birthday)",
+      banner: "Tennessee vs LSU",
+      date: "Saturday, November 21, 2026",
+      kickoff: "TBD",
+      heading: "Tennessee vs LSU, Neyland Stadium",
+      leads: LEADS,
+      foodNote: "Menu: " + MENU,
+      items: [
+        { id: "mustard-bottles", name: "Mustard bottles", singular: "bottle", plural: "bottles", target: null, hint: "", countHint: "Count bottles.", section: "food" },
+        { id: "golf-balls", name: "Golf balls", singular: "ball", plural: "balls", target: null, hint: "", countHint: "Count balls.", section: "food" },
+      ],
+      covered: [
+        { name: "Beer", detail: "24 individual drinks. Brand and pack size are not set." },
+        { name: "Seltzer", detail: "24 individual drinks. Not a specific brand." },
+        { name: "Jack Fire", detail: "Already covered. Amount is not set." },
+      ],
+      location: locationFor(),
+      locationPlacement: "top",
+      seedAttendees: false,
       past: false,
-      pastTailgates: { href: "alabama/", label: "Past tailgates" },
+      gamesMenu: [
+        { href: "./", label: "LSU", current: true },
+        { href: "kentucky/", label: "Kentucky" },
+        { href: "alabama/", label: "Alabama" },
+      ],
+      media: true,
+      mediaApi: "https://g10t-tailgate-media.g10t-tailgate.workers.dev",
     },
   };
 })();

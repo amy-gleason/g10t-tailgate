@@ -1,0 +1,24 @@
+# Staging Worker is already deployed with these gates off and with no secrets.
+# Do not put secret values in this file. GUEST_PIN_LSU and GUEST_PIN_KENTUCKY
+# may be set to the same guest code later. OWNER_TOKEN stays a different secret.
+# Leave UPLOADS_ENABLED and POSTS_ENABLED false until that testing step.
+name = "g10t-tailgate-media"
+main = "src/index.js"
+compatibility_date = "2026-03-01"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "g10t-tailgate-media"
+
+[vars]
+UPLOADS_ENABLED = "false"
+POSTS_ENABLED = "false"
+MAX_PHOTO_BYTES = "20971520"
+MAX_VIDEO_BYTES = "83886080"
+MAX_GAME_BYTES = "2147483648"
+MAX_GAME_FILES = "200"
+MAX_POSTS = "500"
+MAX_REPLIES = "40"
+
+# Secrets, set only in Cloudflare after approval. Do not put values here:
+# GUEST_PIN_LSU, GUEST_PIN_KENTUCKY, OWNER_TOKEN

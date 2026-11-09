@@ -1,0 +1,262 @@
+{
+  "source": "G10T-tailgate-Kentucky-10-26",
+  "fetched": "2026-11-08",
+  "sha256": "e0b7185f3fbd00e5c5fda8ec3ba33faf298340d75611bad097e4c63abde86ac1",
+  "board": {
+    "revision": 43,
+    "signups": [
+      {
+        "id": "7a670c9b-c572-43c5-86f7-e4a07aad6ff1",
+        "itemId": "orange-vodka",
+        "name": "George",
+        "qty": 1,
+        "note": "Handle of Deep Eddy orange",
+        "createdAt": "2026-10-26T19:40:41.701Z",
+        "updatedAt": "2026-10-26T19:40:41.701Z"
+      },
+      {
+        "id": "5b190065-7ddb-436c-bbf6-7c4949519cb8",
+        "itemId": "dolly-shots",
+        "name": "George",
+        "qty": 2,
+        "note": "",
+        "createdAt": "2026-10-26T19:41:26.684Z",
+        "updatedAt": "2026-10-26T19:41:26.684Z"
+      },
+      {
+        "id": "44e4e547-b0b6-4749-beb8-8035c8acd871",
+        "itemId": "7629a8f5-1eca-40c2-90dd-b4896ea5e3f1",
+        "name": "George",
+        "qty": 1,
+        "note": "",
+        "createdAt": "2026-10-26T19:42:40.825Z",
+        "updatedAt": "2026-10-26T19:42:40.825Z"
+      },
+      {
+        "id": "d8c05daf-68ea-4a50-9f3a-e80942aaf6ff",
+        "itemId": "red-bull",
+        "name": "Autumn Gentry",
+        "qty": 6,
+        "note": "",
+        "createdAt": "2026-10-31T00:01:23.025Z",
+        "updatedAt": "2026-10-31T00:01:23.025Z"
+      },
+      {
+        "id": "984e08ed-3420-47d0-b46e-a5114993085a",
+        "itemId": "vodka",
+        "name": "Autumn Gentry",
+        "qty": 1,
+        "note": "",
+        "createdAt": "2026-10-31T00:01:33.257Z",
+        "updatedAt": "2026-10-31T00:01:33.257Z"
+      },
+      {
+        "id": "f704ab10-eeaf-4e0b-b307-dcbaa88ce8ad",
+        "itemId": "diet-soda",
+        "name": "Autumn Gentry",
+        "qty": 12,
+        "note": "",
+        "createdAt": "2026-10-31T00:02:06.284Z",
+        "updatedAt": "2026-10-31T00:02:06.284Z"
+      },
+      {
+        "id": "ca889ccc-317f-4825-b64e-42c4b4e28e60",
+        "itemId": "regular-soda",
+        "name": "Autumn Gentry",
+        "qty": 12,
+        "note": "",
+        "createdAt": "2026-10-31T00:02:19.379Z",
+        "updatedAt": "2026-10-31T00:02:19.379Z"
+      },
+      {
+        "id": "3b568c8f-2f88-4522-96b6-c8908399e105",
+        "itemId": "pineapple-juice",
+        "name": "Autumn Gentry",
+        "qty": 1,
+        "note": "",
+        "createdAt": "2026-10-31T00:02:31.466Z",
+        "updatedAt": "2026-10-31T00:02:31.466Z"
+      },
+      {
+        "id": "ffe6ad2e-96ff-4457-a746-0ef860bcc51d",
+        "itemId": "cranberry-juice",
+        "name": "Autumn Gentry",
+        "qty": 1,
+        "note": "",
+        "createdAt": "2026-10-31T00:02:41.557Z",
+        "updatedAt": "2026-10-31T00:02:41.557Z"
+      },
+      {
+        "id": "37d140f5-48a1-402e-abed-7cc734a76c85",
+        "itemId": "water",
+        "name": "Autumn Gentry",
+        "qty": 2,
+        "note": "",
+        "createdAt": "2026-10-31T00:03:35.523Z",
+        "updatedAt": "2026-10-31T00:03:35.523Z"
+      },
+      {
+        "id": "782fb7fc-df26-4a23-ac07-f675bb74eb64",
+        "itemId": "6bb4a24a-6a63-431b-8529-22f10e6b0edc",
+        "name": "Megan",
+        "qty": 1,
+        "note": "O Canada!",
+        "createdAt": "2026-11-04T16:01:33.327Z",
+        "updatedAt": "2026-11-04T16:01:33.327Z"
+      },
+      {
+        "id": "67de4742-4f8f-4843-baf1-aade485d4335",
+        "itemId": "beer",
+        "name": "George",
+        "qty": 3,
+        "note": "Bud light, Mic Ultra, All Day IPA",
+        "createdAt": "2026-11-04T16:04:14.914Z",
+        "updatedAt": "2026-11-04T16:04:14.914Z"
+      },
+      {
+        "id": "6309f0e3-9870-489b-9e74-67f3ddd2a3be",
+        "itemId": "chick-fil-a-biscuits",
+        "name": "Autumn Gentry",
+        "qty": 20,
+        "note": "",
+        "createdAt": "2026-11-06T13:26:52.529Z",
+        "updatedAt": "2026-11-06T13:26:52.529Z"
+      },
+      {
+        "id": "01d87bed-7f05-4155-84f1-9d25373b5413",
+        "itemId": "champagne",
+        "name": "Amy Gleason",
+        "qty": 1,
+        "note": "Dont need now",
+        "createdAt": "2026-11-07T06:22:25.873Z",
+        "updatedAt": "2026-11-07T06:22:25.873Z"
+      },
+      {
+        "id": "5aa04ca7-1216-4f87-a683-bf2265797e44",
+        "itemId": "high-noons",
+        "name": "Amy Gleason",
+        "qty": 12,
+        "note": "",
+        "createdAt": "2026-11-07T06:22:52.978Z",
+        "updatedAt": "2026-11-07T06:22:52.978Z"
+      },
+      {
+        "id": "404bb8de-9398-4b95-8d68-a4b9f9db5b74",
+        "itemId": "hard-mountain-dew",
+        "name": "Amy Gleason",
+        "qty": 24,
+        "note": "",
+        "createdAt": "2026-11-07T06:23:12.314Z",
+        "updatedAt": "2026-11-07T06:23:12.314Z"
+      },
+      {
+        "id": "ae419d1c-1729-4c0e-991a-f11e7c8ec107",
+        "itemId": "2f114c4b-c4b9-4971-9023-bd347d552ca5",
+        "name": "George & Megan Frank",
+        "qty": 1,
+        "note": "Per Greg, for the Canadians! With whip cream for baby beers",
+        "createdAt": "2026-11-07T18:51:52.849Z",
+        "updatedAt": "2026-11-07T18:52:20.319Z"
+      }
+    ],
+    "customItems": [
+      {
+        "id": "7629a8f5-1eca-40c2-90dd-b4896ea5e3f1",
+        "name": "Orange Crush Shots",
+        "unit": "Bottle",
+        "category": "drink",
+        "createdAt": "2026-10-26T19:42:40.825Z"
+      },
+      {
+        "id": "6bb4a24a-6a63-431b-8529-22f10e6b0edc",
+        "name": "Maple Butter Tarts",
+        "unit": "4 dozen",
+        "category": "food",
+        "createdAt": "2026-11-04T16:01:33.327Z"
+      },
+      {
+        "id": "2f114c4b-c4b9-4971-9023-bd347d552ca5",
+        "name": "Licor 43",
+        "unit": "1 bottle",
+        "category": "drink",
+        "createdAt": "2026-11-07T18:51:52.849Z"
+      }
+    ],
+    "donations": [
+      {
+        "id": "1ab52878-dd0a-4a8f-ac72-e22385d1fc4b",
+        "name": "Robert Forman",
+        "amount": 200,
+        "note": "",
+        "createdAt": "2026-11-02T00:22:16.335Z",
+        "updatedAt": "2026-11-02T00:22:16.335Z"
+      }
+    ],
+    "attendees": [
+      {
+        "id": "420e8c0b-4aa9-490a-979f-ae6642b1eef3",
+        "name": "Katie",
+        "guests": 1,
+        "note": "",
+        "createdAt": "2026-10-26T18:20:59.355Z",
+        "updatedAt": "2026-10-26T18:20:59.355Z"
+      },
+      {
+        "id": "78391531-3eda-4301-857f-0ac13e524bf9",
+        "name": "The Canadians",
+        "guests": 5,
+        "note": "",
+        "createdAt": "2026-10-26T23:01:42.223Z",
+        "updatedAt": "2026-10-26T23:01:42.223Z"
+      },
+      {
+        "id": "2ace0f20-20d9-4355-91ac-f8459f682a68",
+        "name": "Nick Mato",
+        "guests": 2,
+        "note": "",
+        "createdAt": "2026-10-27T16:15:36.628Z",
+        "updatedAt": "2026-10-27T16:17:15.968Z"
+      },
+      {
+        "id": "8a1fa21a-d6cb-47e7-a5d4-3efbdfa035a4",
+        "name": "Autumn Gentry",
+        "guests": 2,
+        "note": "Lara Moses Whitaker",
+        "createdAt": "2026-10-27T20:26:45.959Z",
+        "updatedAt": "2026-10-27T20:26:45.959Z"
+      },
+      {
+        "id": "11ebabbe-e25d-490b-a161-835d696616c3",
+        "name": "Amy Gleason",
+        "guests": 1,
+        "note": "",
+        "createdAt": "2026-10-30T23:59:22.405Z",
+        "updatedAt": "2026-10-30T23:59:22.405Z"
+      },
+      {
+        "id": "dd32ee54-338c-4e1c-9ceb-fa1afd9c6483",
+        "name": "Mike Gleason",
+        "guests": 1,
+        "note": "",
+        "createdAt": "2026-10-31T00:00:25.210Z",
+        "updatedAt": "2026-10-31T00:00:25.210Z"
+      },
+      {
+        "id": "1d90f1df-56d6-48b5-b8e3-419aed8b38da",
+        "name": "Robert Forman",
+        "guests": 1,
+        "note": "",
+        "createdAt": "2026-11-02T00:20:48.171Z",
+        "updatedAt": "2026-11-02T00:20:48.171Z"
+      },
+      {
+        "id": "f334ff56-f747-476f-91d9-4b9512e34d68",
+        "name": "George & Megan Frank",
+        "guests": 2,
+        "note": "",
+        "createdAt": "2026-11-03T07:20:44.247Z",
+        "updatedAt": "2026-11-03T07:20:44.247Z"
+      }
+    ]
+  }
+}

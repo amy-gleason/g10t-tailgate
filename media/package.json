@@ -1,0 +1,12 @@
+{
+  "name": "g10t-tailgate-media",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/api.test.mjs",
+    "dev": "node dev-server.mjs"
+  },
+  "devDependencies": {
+    "miniflare": "3.20250718.3"
+  }
+}
