@@ -196,22 +196,113 @@
     return run(items, batchId, batchSize);
   }
 
+  function mediaType(file) {
+    return String(file.contentType || "").split(";")[0].trim().toLowerCase();
+  }
+  function videoType(file) {
+    var type = mediaType(file);
+    if (type === "video/mp4" || type === "video/webm" || type === "video/quicktime") return type;
+    return file.preview === "video" ? "video/mp4" : "";
+  }
+  function downloadOriginal(file, target) {
+    fetch(api + "/v1/" + gameId + "/files/" + file.id, { headers: guestHeaders() })
+      .then(function (response) { if (!response.ok) throw new Error("download"); return response.blob(); })
+      .then(function (blob) {
+        var link = el("a", { href: URL.createObjectURL(blob), download: file.name });
+        link.click();
+      })
+      .catch(function () { target.append(note("Could not download that file.")); });
+  }
+  var viewerFiles = [];
+  var viewerIndex = 0;
+  var viewerReturn = null;
+  var viewer = null;
+  function showViewer(index, returnTo) {
+    viewerIndex = index;
+    viewerReturn = returnTo || document.activeElement;
+    if (!viewer) viewer = buildViewer();
+    paintViewer();
+    viewer.hidden = false;
+    viewer.querySelector(".viewer-close").focus();
+  }
+  function closeViewer() {
+    if (!viewer) return;
+    viewer.hidden = true;
+    if (viewerReturn && viewerReturn.focus) viewerReturn.focus();
+  }
+  function paintViewer() {
+    var file = viewerFiles[viewerIndex];
+    var stage = viewer.querySelector(".viewer-stage");
+    var label = viewer.querySelector(".viewer-count");
+    label.textContent = (viewerIndex + 1) + " of " + viewerFiles.length;
+    viewer.querySelector(".viewer-prev").disabled = viewerIndex === 0;
+    viewer.querySelector(".viewer-next").disabled = viewerIndex === viewerFiles.length - 1;
+    stage.replaceChildren(note("Loading…"));
+    var kind = videoType(file);
+    fetch(api + "/v1/" + gameId + "/files/" + file.id + (kind ? "" : "?inline=1"), { headers: guestHeaders() })
+      .then(function (response) { if (!response.ok) throw new Error("preview"); return response.blob(); })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        if (kind) {
+          var video = el("video", { controls: "", playsinline: "", preload: "metadata" });
+          video.setAttribute("playsinline", "");
+          video.addEventListener("error", function () {
+            stage.replaceChildren(note("This browser could not play this video. You can download it instead."));
+          });
+          stage.replaceChildren(video);
+          video.src = url;
+          return;
+        }
+        var image = el("img", { src: url, alt: file.name });
+        stage.replaceChildren(image);
+      })
+      .catch(function () { stage.replaceChildren(note("Preview failed. The original can still be downloaded.")); });
+  }
+  function buildViewer() {
+    var stage = el("div", { class: "viewer-stage" });
+    var count = el("p", { class: "viewer-count" });
+    var prev = el("button", { type: "button", class: "viewer-nav viewer-prev" }, "Previous");
+    var next = el("button", { type: "button", class: "viewer-nav viewer-next" }, "Next");
+    var close = el("button", { type: "button", class: "viewer-close" }, "Close");
+    var download = el("button", { type: "button", class: "viewer-nav" }, "Download original");
+    prev.addEventListener("click", function () { if (viewerIndex > 0) { viewerIndex -= 1; paintViewer(); } });
+    next.addEventListener("click", function () { if (viewerIndex < viewerFiles.length - 1) { viewerIndex += 1; paintViewer(); } });
+    close.addEventListener("click", closeViewer);
+    download.addEventListener("click", function () { downloadOriginal(viewerFiles[viewerIndex], stage); });
+    var root = el("div", { class: "viewer", role: "dialog", "aria-modal": "true", "aria-label": "Photo viewer", hidden: "" });
+    var bar = el("div", { class: "viewer-bar" }, close, count, download);
+    var nav = el("div", { class: "viewer-bar" }, prev, next);
+    root.append(bar, stage, nav);
+    var startX = 0;
+    stage.addEventListener("touchstart", function (event) { startX = event.changedTouches[0].clientX; }, { passive: true });
+    stage.addEventListener("touchend", function (event) {
+      var delta = event.changedTouches[0].clientX - startX;
+      if (delta > 40 && viewerIndex > 0) { viewerIndex -= 1; paintViewer(); }
+      if (delta < -40 && viewerIndex < viewerFiles.length - 1) { viewerIndex += 1; paintViewer(); }
+    });
+    root.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") { event.stopPropagation(); closeViewer(); }
+      if (event.key === "ArrowLeft" && viewerIndex > 0) { viewerIndex -= 1; paintViewer(); }
+      if (event.key === "ArrowRight" && viewerIndex < viewerFiles.length - 1) { viewerIndex += 1; paintViewer(); }
+    });
+    document.body.append(root);
+    document.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape" || root.hidden) return;
+      event.stopPropagation();
+      closeViewer();
+    });
+    return root;
+  }
   function fileCard(file) {
-    var card = el("article", { class: file.preview === "none" ? "file-tile" : "shot" });
+    var playable = Boolean(videoType(file));
+    var image = file.preview === "image";
+    var card = el("article", { class: image || playable ? "shot" : "file-tile" });
     var meta = el("div", { class: "file-tile" },
       el("p", { class: "row-title" }, file.name),
       el("p", { class: "row-meta" }, [file.uploadedBy, when(file.createdAt), sizeLabel(file.bytes)].filter(Boolean).join(" · "))
     );
     var download = el("button", { type: "button", class: "btn" }, "Download original");
-    download.addEventListener("click", function () {
-      fetch(api + "/v1/" + gameId + "/files/" + file.id, { headers: guestHeaders() })
-        .then(function (response) { if (!response.ok) throw new Error("download"); return response.blob(); })
-        .then(function (blob) {
-          var link = el("a", { href: URL.createObjectURL(blob), download: file.name });
-          link.click();
-        })
-        .catch(function () { meta.append(note("Could not download that file.")); });
-    });
+    download.addEventListener("click", function () { downloadOriginal(file, meta); });
     meta.append(download);
     if (ownerToken()) {
       var removeFile = el("button", { type: "button", class: "btn ghost" }, "Remove file");
@@ -221,39 +312,84 @@
       });
       meta.append(removeFile);
     }
-    if (file.preview === "none") {
+    if (!image && !playable) {
       meta.prepend(note("This browser can't preview this file. The original is unchanged."));
       card.append(meta);
       return card;
     }
-    fetch(api + "/v1/" + gameId + "/files/" + file.id + "?inline=1", { headers: guestHeaders() })
+    var open = el("button", { type: "button", class: "shot-open", "aria-label": "Open " + file.name });
+    open.addEventListener("click", function () {
+      viewerFiles = viewerSource();
+      var index = 0;
+      viewerFiles.forEach(function (item, itemIndex) { if (item.id === file.id) index = itemIndex; });
+      showViewer(index, open);
+    });
+    card.append(open, meta);
+    var holder = el("div");
+    fetch(api + "/v1/" + gameId + "/files/" + file.id + (playable ? "" : "?inline=1"), { headers: guestHeaders() })
       .then(function (response) { if (!response.ok) throw new Error("preview"); return response.blob(); })
       .then(function (blob) {
         var url = URL.createObjectURL(blob);
-        var view = file.preview === "video" ? el("video", { controls: "", src: url }) : el("img", { src: url, alt: file.name });
-        card.prepend(view);
+        if (playable) {
+          var video = el("video", { controls: "", playsinline: "", preload: "metadata" });
+          video.setAttribute("playsinline", "");
+          video.addEventListener("error", function () {
+            holder.replaceChildren(note("This browser could not play this video. You can download it instead."));
+          });
+          holder.replaceChildren(video);
+          video.src = url;
+          return;
+        }
+        var img = el("img", { src: url, alt: file.name });
+        open.replaceChildren(img);
       })
-      .catch(function () { meta.prepend(note("Preview failed. The original can still be downloaded.")); });
-    card.append(meta);
+      .catch(function () {
+        var message = note("Preview failed. The original can still be downloaded.");
+        if (playable) holder.replaceChildren(message);
+        else meta.prepend(message);
+      });
+    if (playable) card.insertBefore(holder, meta);
     return card;
   }
+  var galleryFiles = [];
+  function viewerSource() { return galleryFiles.filter(function (file) { return file.preview === "image" || videoType(file); }); }
 
   function renderFiles(data) {
-    var name = el("input", { class: "input", maxLength: "40", autocomplete: "name", placeholder: "Your name" });
+    var name = el("input", { class: "input", maxLength: "40", autocomplete: "name", placeholder: "Your name", "aria-required": "true", "aria-describedby": "upload-name-error" });
+    var nameError = el("p", { class: "field-error", id: "upload-name-error", role: "alert" });
+    nameError.hidden = true;
     var picker = el("input", { class: "file-input", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
+    galleryFiles = data.files || [];
     var list = el("div", { class: "gallery" });
-    (data.files || []).forEach(function (file) { list.append(fileCard(file)); });
+    galleryFiles.forEach(function (file) { list.append(fileCard(file)); });
+    function showNameError() {
+      name.setAttribute("aria-invalid", "true");
+      nameError.hidden = false;
+      nameError.textContent = "Name is required";
+      name.focus();
+      name.scrollIntoView({ block: "center" });
+    }
+    name.addEventListener("input", function () {
+      if (!name.value.trim()) return;
+      name.removeAttribute("aria-invalid");
+      nameError.hidden = true;
+      nameError.textContent = "";
+    });
     var batchError = el("p", { class: "field-error", role: "alert" });
     batchError.hidden = true;
     var form = el("form", { class: "stack" },
-      el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Your name (required)"), name, nameError),
       el("label", { class: "field" }, el("span", { class: "label" }, "Photos and videos"), picker),
       batchError,
       el("button", { type: "submit", class: "btn" }, "Upload")
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      if (!name.value.trim() || !picker.files.length) return;
+      if (!name.value.trim()) {
+        showNameError();
+        return;
+      }
+      if (!picker.files.length) return;
       if (picker.files.length > 50) {
         batchError.hidden = false;
         batchError.textContent = "Choose 50 files or fewer at a time.";
@@ -270,7 +406,7 @@
       form
     );
     if (batchHost) photos.append(batchHost);
-    photos.append(list, ownerTools(function () { return loadFiles(); }));
+    photos.append(list);
   }
 
   function replyForm(post) {
@@ -355,23 +491,53 @@
     });
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
     refresh.addEventListener("click", loadPosts);
-    posts.replaceChildren(form, refresh, list, ownerTools(loadPosts));
+    posts.replaceChildren(form, refresh, list);
   }
 
-  function ownerTools(after) {
-    var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Owner key" });
-    input.value = ownerToken();
+  function setupOwnerDialog() {
+    var input = el("input", { class: "input", type: "password", autocomplete: "off", id: "owner-key-input" });
+    var status = el("p", { class: "hint", role: "status" });
     var form = el("form", { class: "stack" },
-      el("p", { class: "hint" }, "Owner key removes messages or files. Guests do not get this."),
-      input,
-      el("button", { type: "submit", class: "btn ghost" }, "Save owner key on this phone")
+      el("p", { class: "hint" }, "The owner key removes files or messages. A guest code cannot do that."),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Owner key"), input),
+      status,
+      el("button", { type: "submit", class: "btn" }, "Save owner key on this phone")
     );
+    var close = el("button", { type: "button", class: "btn ghost" }, "Close");
+    var panel = el("div", { class: "owner-panel", role: "dialog", "aria-modal": "true", "aria-labelledby": "owner-dialog-title" },
+      el("h2", { id: "owner-dialog-title" }, "Owner tools"),
+      form,
+      close
+    );
+    var dialog = el("div", { id: "owner-dialog", class: "owner-dialog", hidden: "" }, panel);
+    function closeDialog() {
+      dialog.hidden = true;
+      var opener = document.getElementById("owner-menu-button");
+      if (opener) opener.focus();
+    }
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      try { sessionStorage.setItem(ownerKey, input.value.trim()); } catch (err) {}
-      if (after) after();
+      var value = input.value.trim();
+      try {
+        if (value) sessionStorage.setItem(ownerKey, value);
+        else sessionStorage.removeItem(ownerKey);
+      } catch (err) {}
+      input.value = "";
+      status.textContent = value ? "Owner key saved on this phone." : "Owner key cleared on this phone.";
+      loadAll();
     });
-    return el("details", null, el("summary", null, "Owner tools"), form);
+    close.addEventListener("click", closeDialog);
+    dialog.addEventListener("click", function (event) { if (event.target === dialog) closeDialog(); });
+    panel.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") { event.stopPropagation(); closeDialog(); }
+    });
+    document.body.append(dialog);
+    document.addEventListener("tailgate-owner-tools", function () {
+      input.value = "";
+      status.textContent = ownerToken() ? "An owner key is already saved on this phone." : "";
+      dialog.hidden = false;
+      input.focus();
+    });
   }
 
   function loadFiles() {
@@ -395,6 +561,7 @@
     }).catch(function () { posts.replaceChildren(note("Messages aren't available yet.")); });
   }
   function loadAll() { return Promise.all([loadFiles(), loadPosts()]); }
+  setupOwnerDialog();
   if (!pin) gate("");
   else loadAll();
 })();
