@@ -273,7 +273,8 @@
     photos.append(list, ownerTools(function () { return loadFiles(); }));
   }
 
-  var MESSAGE_LIMIT = 1000;
+  var POST_LIMIT = 5000;
+  var REPLY_LIMIT = 1000;
   function fitMessage(box) {
     box.style.height = "auto";
     box.style.height = box.scrollHeight + "px";
@@ -286,8 +287,8 @@
   function messageBody(text) {
     return el("p", { class: "message-body" }, text);
   }
-  function tooLong(kind, value) {
-    return "This " + kind + " is " + value.length + " characters. The limit is " + MESSAGE_LIMIT + ", so it was not sent.";
+  function tooLong(kind, value, limit) {
+    return "This " + kind + " is " + value.length + " characters. The limit is " + limit + ", so it was not sent.";
   }
   function replyForm(post) {
     var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name" });
@@ -300,8 +301,8 @@
     });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      if (text.value.length > MESSAGE_LIMIT) {
-        error.replaceChildren(el("p", { class: "form-error" }, tooLong("reply", text.value)));
+      if (text.value.length > REPLY_LIMIT) {
+        error.replaceChildren(el("p", { class: "form-error" }, tooLong("reply", text.value, REPLY_LIMIT)));
         return;
       }
       fetch(api + "/v1/" + gameId + "/posts/" + post.id, {
@@ -335,8 +336,8 @@
     });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      if (text.value.length > MESSAGE_LIMIT) {
-        error.replaceChildren(el("p", { class: "form-error" }, tooLong("message", text.value)));
+      if (text.value.length > POST_LIMIT) {
+        error.replaceChildren(el("p", { class: "form-error" }, tooLong("message", text.value, POST_LIMIT)));
         return;
       }
       fetch(api + "/v1/" + gameId + "/posts", {

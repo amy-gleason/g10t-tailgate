@@ -361,9 +361,9 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     if (env.POSTS_ENABLED !== "true") return json({ error: "Messages are turned off." }, 403, origin);
     const payload = await request.json().catch(() => null);
     const name = plain(payload?.name, 40);
-    const body = messageText(payload?.text, 1000);
+    const body = messageText(payload?.text, 5000);
     if (!name || !body.text) return json({ error: "Enter your name and a message." }, 400, origin);
-    if (body.tooLong) return json({ error: "That message is longer than 1000 characters." }, 400, origin);
+    if (body.tooLong) return json({ error: "That message is longer than 5000 characters." }, 400, origin);
     const text = body.text;
     if (!(await rateAllow(env, game, "posts", 12))) return json({ error: "Too many messages. Wait a few minutes." }, 429, origin);
     const maxPosts = num(env, "MAX_POSTS", 500);
