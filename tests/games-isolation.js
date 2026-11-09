@@ -80,8 +80,10 @@ assert.strictEqual(lsu.media, true);
 assert.strictEqual(lsu.mediaApi, "https://g10t-tailgate-media.g10t-tailgate.workers.dev");
 assert.strictEqual(kentucky.media, true);
 assert.strictEqual(kentucky.mediaApi, lsu.mediaApi);
-assert.ok(!alabama.media);
-assert.ok(!alabama.mediaApi);
+assert.strictEqual(alabama.media, true);
+assert.strictEqual(alabama.mediaApi, kentucky.mediaApi);
+assert.ok(fs.readFileSync("alabama/index.html", "utf8").includes("media-client.js"));
+assert.strictEqual(alabama.telegraphPath, "G10T-tailgate-data-10-15");
 
 assert.ok(kentucky.foodNote.includes("Grilled Chicken Teriyaki"));
 assert.strictEqual(kentucky.telegraphPath, "G10T-tailgate-Kentucky-10-26");
