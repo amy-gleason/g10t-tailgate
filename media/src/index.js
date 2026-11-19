@@ -1,4 +1,5 @@
 import { handleMove, migrationKey, moveBlocksWrites, noteTestNow } from "./move.js";
+import { handleListWrite } from "./list.js";
 
 const GAMES = new Set(["lsu", "kentucky"]);
 const PHOTO_TYPES = new Set([
@@ -499,6 +500,13 @@ export default {
       }, 200, origin);
     }
     const parts = url.pathname.split("/").filter(Boolean);
+    if (parts[0] === "v1" && parts.length === 3 && (parts[2] === "rsvp" || parts[2] === "bring" || parts[2] === "donations")) {
+      try {
+        return await handleListWrite(request, env, parts[1], parts[2], origin, json);
+      } catch {
+        return json({ error: "Could not finish that. Try again." }, 500, origin);
+      }
+    }
     if (parts[0] !== "v1" || !GAMES.has(parts[1])) return json({ error: "Unknown game." }, 404, origin);
     const game = parts[1];
     try {

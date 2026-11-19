@@ -95,6 +95,13 @@
     if (parts[2] === "files" && method === "POST") return json({ error: "Uploads stay off in this preview." }, 403);
     if (parts[2] === "posts" && parts.length === 3 && method === "GET") return json({ posts: posts.slice() });
     if (parts[2] === "posts" && method === "POST") return json({ error: "Messages stay off in this preview." }, 403);
+    if ((parts[2] === "rsvp" || parts[2] === "bring" || parts[2] === "donations") && method === "POST") {
+      return json({
+        ok: true,
+        added: ["preview-row"],
+        board: { revision: 2, signups: [], customItems: [], donations: [], attendees: [{ id: "preview-row", name: "Preview guest", guests: 1, note: "", createdAt: "2026-11-21T15:00:00.000Z", updatedAt: "2026-11-21T15:00:00.000Z" }] }
+      });
+    }
     if (parts[2] === "posts" && parts.length === 4 && method === "DELETE") {
       if (!header("x-owner-token")) return json({ error: "Owner key was not accepted." }, 401);
       posts = posts.filter(function (item) { return item.id !== parts[3]; });

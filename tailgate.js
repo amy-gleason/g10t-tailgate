@@ -587,29 +587,63 @@
     }
     return "";
   }
-  async function oe(e) {
-    var problem = pathProblem(game);
-    if (problem) throw new Error("Refusing to write. " + problem);
-    let n = new URLSearchParams({
-        access_token:
-          "efb35591d90ebe09b367cbaba05104b105b3a9e8ea4c7f6b1715032f73e5",
-        title: game.telegraphTitle,
-        content: JSON.stringify([
-          { tag: "pre", children: [JSON.stringify(e)] },
-        ]),
-        return_content: "true",
-      }),
-      t = await fetch(
-        "https://api.telegra.ph/editPage/" + game.telegraphPath,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: n.toString(),
-        },
-      );
-    if (!t.ok) throw new Error("Could not save. Try again.");
-    let r = await t.json();
-    if (!r.ok) throw new Error("Could not save. Try again.");
+  function listBase() {
+    if (document.body && document.body.dataset.preview === "1") return "https://preview.invalid";
+    var games = window.TAILGATE_GAMES || {};
+    var own = game.mediaApi;
+    if (own) return String(own).replace(/\/$/, "");
+    var ids = Object.keys(games);
+    for (var i = 0; i < ids.length; i++) {
+      var api = games[ids[i]] && games[ids[i]].mediaApi;
+      if (api) return String(api).replace(/\/$/, "");
+    }
+    return "";
+  }
+  function listRequest(action) {
+    switch (action.type) {
+      case "add-attendee":
+        return { route: "rsvp", body: { op: "add", name: action.name, guests: action.guests, note: action.note || "" } };
+      case "update-attendee":
+        return { route: "rsvp", body: { op: "update", id: action.id, name: action.name, guests: action.guests, note: action.note || "" } };
+      case "delete-attendee":
+        return { route: "rsvp", body: { op: "delete", id: action.id } };
+      case "add-signup":
+        return { route: "bring", body: { op: "add", itemId: action.itemId, name: action.name, qty: action.qty, note: action.note || "" } };
+      case "update-signup":
+        return { route: "bring", body: { op: "update", id: action.id, name: action.name, qty: action.qty, note: action.note || "" } };
+      case "delete-signup":
+        return { route: "bring", body: { op: "delete", id: action.id } };
+      case "add-custom":
+        return { route: "bring", body: { op: "add-item", name: action.name, unit: action.unit, category: action.category, signerName: action.signerName, qty: action.qty, note: action.note || "" } };
+      case "rename-custom":
+        return { route: "bring", body: { op: "rename-item", id: action.id, name: action.name, unit: action.unit } };
+      case "delete-custom":
+        return { route: "bring", body: { op: "delete-item", id: action.id } };
+      case "add-donation":
+        return { route: "donations", body: { op: "add", name: action.name, amount: action.amount, note: action.note || "" } };
+      case "update-donation":
+        return { route: "donations", body: { op: "update", id: action.id, name: action.name, amount: action.amount, note: action.note || "" } };
+      case "delete-donation":
+        return { route: "donations", body: { op: "delete", id: action.id } };
+      default:
+        return null;
+    }
+  }
+  async function saveList(action) {
+    var request = listRequest(action);
+    var base = listBase();
+    if (!request || !base) throw new Error("Could not save. Try again.");
+    var response = await fetch(base + "/v1/" + game.id + "/" + request.route, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(request.body),
+    });
+    var payload = null;
+    try { payload = await response.json(); } catch (err) { payload = null; }
+    if (!response.ok || !payload || !payload.board) {
+      throw new Error((payload && payload.error) || "Could not save. Try again.");
+    }
+    return payload;
   }
   async function ie(e) {
     let t = await fetch(
@@ -636,36 +670,20 @@
       );
     return G(a);
   }
-  function je(e, t, n) {
-    let r = new Set([
-        ...e.signups.map((a) => a.id),
-        ...e.donations.map((a) => a.id),
-        ...e.attendees.map((a) => a.id),
-      ]),
-      o = [
-        ...t.signups.map((a) => a.id),
-        ...t.donations.map((a) => a.id),
-        ...t.attendees.map((a) => a.id),
-      ].filter((a) => !r.has(a));
-    (J(ee, n),
-      (s.name = n),
-      o.length !== 0 &&
-        ((s.mine = [...new Set([...s.mine, ...o])]),
-        J(te, JSON.stringify(s.mine))));
-  }
   async function b(e, t) {
     ((s.saving = !0), m());
     try {
-      let n = await re(async () => {
-        let r = await ie(!1),
-          o = O(r, e);
-        if (!o.ok) throw new Error(o.error);
-        let a = { ...o.board, revision: r.revision + 1 };
-        return (await oe(a), { current: r, saved: a });
-      });
+      let n = await re(() => saveList(e));
+      let saved = G(n.board);
+      if (t) {
+        (J(ee, t), (s.name = t));
+        if (Array.isArray(n.added) && n.added.length) {
+          ((s.mine = [...new Set([...s.mine, ...n.added.filter((id) => typeof id == "string")])]),
+            J(te, JSON.stringify(s.mine)));
+        }
+      }
       return (
-        t && je(n.current, n.saved, t),
-        (s.board = n.saved),
+        (s.board = saved),
         (s.updated = new Date()),
         (s.error = null),
         (s.editor = null),
