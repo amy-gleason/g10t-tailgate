@@ -137,6 +137,125 @@
     var messageCount = document.getElementById("job-count-messages");
     if (messageCount) messageCount.textContent = posts ? posts + " posted" : "Notes for this game";
   }
+  var labelFor = { lsu: "LSU", kentucky: "Kentucky", alabama: "Alabama" };
+  var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  function whenParts(date) {
+    var match = String(date || "").match(/([A-Za-z]+)\s+(\d{1,2})/);
+    if (!match || monthNames.indexOf(match[1]) === -1) return { mon: "", day: "" };
+    return { mon: match[1].slice(0, 3), day: match[2] };
+  }
+  function gameLink(id) {
+    var label = labelFor[id];
+    var links = game.gamesMenu || [];
+    for (var i = 0; i < links.length; i++) if (links[i].label === label) return links[i];
+    return { href: "./", label: label || id };
+  }
+  var here = whenParts(game.date);
+  var switchLabel = (labelFor[gameId] || "Games") + (here.day ? " · " + here.mon + " " + here.day : "");
+  var opener = el("button", {
+    type: "button",
+    class: "game-switch",
+    id: "game-switch",
+    "aria-haspopup": "dialog",
+    "aria-controls": "game-sheet",
+  }, switchLabel);
+  main.insertBefore(opener, main.firstChild);
+  var oldNav = document.querySelector(".game-nav");
+  if (oldNav) oldNav.hidden = true;
+
+  var sheetList = el("div");
+  function addGroup(title, list) {
+    if (!list.length) return;
+    sheetList.append(el("p", { class: "game-kicker" }, title));
+    var ul = el("ul", { class: "game-list" });
+    list.forEach(function (entry) {
+      var parts = whenParts(entry.date);
+      var dateMark = el("span", { class: "game-date" }, el("span", null, parts.mon.toUpperCase()), el("b", null, parts.day || ""));
+      var link = el("a", { href: entry.href }, dateMark, el("span", null, el("b", null, entry.title), el("span", { class: "game-sub" }, entry.detail)));
+      if (entry.current) link.setAttribute("aria-current", "page");
+      ul.append(el("li", null, link));
+    });
+    sheetList.append(ul);
+  }
+  var upcoming = [];
+  var past = [];
+  Object.keys(window.TAILGATE_GAMES).forEach(function (id) {
+    var item = window.TAILGATE_GAMES[id];
+    var link = gameLink(id);
+    var row = {
+      id: id,
+      date: item.date,
+      href: link.href,
+      current: id === gameId,
+      title: item.banner || labelFor[id] || id,
+      detail: item.past ? "Past game" : "Next up",
+    };
+    if (item.past) past.push(row);
+    else upcoming.push(row);
+  });
+  addGroup("Next up", upcoming);
+  addGroup("Past games", past);
+  var closeGames = el("button", { type: "button", class: "btn ghost", id: "game-sheet-close" }, "Close");
+  var sheet = el("div", {
+    id: "game-sheet",
+    class: "game-sheet",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-labelledby": "game-sheet-title",
+    hidden: "",
+  }, el("div", { class: "game-sheet-panel" },
+    el("div", { class: "game-sheet-bar" }, el("h2", { id: "game-sheet-title" }, "Games"), closeGames),
+    sheetList
+  ));
+  document.body.append(sheet);
+  function closeSheet() {
+    sheet.hidden = true;
+    document.body.style.overflow = "";
+    opener.focus();
+  }
+  function openSheet() {
+    sheet.hidden = false;
+    document.body.style.overflow = "hidden";
+    closeGames.focus();
+  }
+  opener.addEventListener("click", openSheet);
+  closeGames.addEventListener("click", closeSheet);
+  sheet.addEventListener("click", function (event) { if (event.target === sheet) closeSheet(); });
+  sheet.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSheet();
+    }
+  });
+
+  if (game.past) {
+    document.body.classList.add("past-game");
+    var nextId = Object.keys(window.TAILGATE_GAMES).filter(function (id) { return !window.TAILGATE_GAMES[id].past; })[0];
+    var next = nextId ? window.TAILGATE_GAMES[nextId] : null;
+    var banner = el("p", { class: "archive-banner", role: "status" }, "This game is over.");
+    if (next) {
+      banner.append(document.createTextNode(" "));
+      banner.append(el("a", { href: gameLink(nextId).href }, "Go to " + (labelFor[nextId] || next.banner)));
+    }
+    main.insertBefore(banner, main.firstChild);
+    var photosAcc = document.querySelector('.acc[data-section="photos"]');
+    if (photosAcc && !photosAcc.querySelector(".past-photos-title")) {
+      photosAcc.insertBefore(el("h2", { class: "past-photos-title" }, "Photos & videos"), photosAcc.firstChild);
+    }
+    var prompt = /^(I['’]ll bring|Add me|Sign me up|Add it|Add donation|Upload|Send message|Reply|Edit|Remove|Yes, remove)/;
+    function hush(root) {
+      root.querySelectorAll("form").forEach(function (form) { form.hidden = true; });
+      root.querySelectorAll("button").forEach(function (button) {
+        if (button.closest(".job-tabs, .job-cards, .game-sheet, .viewer, .manage, .modal")) return;
+        if (prompt.test((button.textContent || "").trim())) button.hidden = true;
+      });
+    }
+    hush(main);
+    if (window.MutationObserver) {
+      new MutationObserver(function () { hush(main); }).observe(main, { childList: true, subtree: true });
+    }
+  }
+
   var start = fromHash[(location.hash || "").replace("#", "")] || "game";
   select(start, false);
   window.addEventListener("hashchange", function () {
