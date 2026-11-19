@@ -69,8 +69,7 @@ async function openPage(browser, base, capture) {
   await page.waitForSelector("#photos-body input");
   await page.type("#photos-body input", "local-only");
   await page.click("#photos-body button");
-  await page.waitForSelector("#photos-body details summary");
-  await page.click("#photos-body details summary");
+  await page.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
   return page;
 }
 
@@ -86,9 +85,11 @@ test("owner key stays in memory and is sent without a re-render", async () => {
   try {
     const empty = await openPage(browser, base, capture);
     const before = capture.moves.length;
-    await empty.click("#photos-body .move-panel button");
-    const prompt = await empty.$eval("#photos-body .move-panel [role=status]", (node) => node.textContent);
-    assert.equal(prompt, "Enter and save your owner key first");
+    await empty.click("#owner-entry");
+    await empty.waitForSelector("#owner-key-dialog:not([hidden])");
+    const manageHidden = await empty.$eval("#manage-dialog", (node) => node.hidden).catch(() => true);
+    assert.equal(manageHidden, true);
+    await empty.click("#owner-key-dialog button[type=submit]");
     assert.equal(capture.moves.length, before);
     await empty.close();
 
@@ -96,30 +97,31 @@ test("owner key stays in memory and is sent without a re-render", async () => {
     await page.evaluate(() => {
       Storage.prototype.setItem = function () { throw new Error("storage blocked"); };
     });
-    const marked = await page.evaluate(() => {
-      const details = document.querySelector("#photos-body details");
-      details.dataset.stay = "photos-owner";
-      const input = details.querySelector("input");
-      return {
-        type: input.type,
-        autocapitalize: input.getAttribute("autocapitalize"),
-        autocorrect: input.getAttribute("autocorrect"),
-        spellcheck: input.getAttribute("spellcheck"),
-      };
-    });
+    const scattered = await page.evaluate(() => ({
+      details: document.querySelectorAll("#photos-body details, #posts-body details").length,
+    }));
+    assert.equal(scattered.details, 0);
+    await page.click("#owner-entry");
+    await page.waitForSelector("#owner-key-input");
+    const marked = await page.$eval("#owner-key-input", (input) => ({
+      type: input.type,
+      autocapitalize: input.getAttribute("autocapitalize"),
+      autocorrect: input.getAttribute("autocorrect"),
+      spellcheck: input.getAttribute("spellcheck"),
+    }));
     assert.equal(marked.type, "password");
     assert.equal(marked.autocapitalize, "off");
     assert.equal(marked.autocorrect, "off");
     assert.equal(marked.spellcheck, "false");
     const listsBefore = capture.lists;
-    await page.type("#photos-body details input", "  Exact Key  ");
-    await page.click("#photos-body details button");
+    await page.type("#owner-key-input", "  Exact Key  ");
+    await page.click("#owner-key-dialog button[type=submit]");
     const afterSave = await page.evaluate(() => {
-      const details = document.querySelector("#photos-body details[data-stay=photos-owner]");
+      const dialog = document.getElementById("owner-key-dialog");
       return {
-        connected: Boolean(details && details.isConnected),
-        open: Boolean(details && details.open),
-        status: details ? details.querySelector("[role=status]").textContent : "",
+        connected: Boolean(dialog && dialog.isConnected),
+        open: Boolean(dialog && !dialog.hidden),
+        status: dialog ? dialog.querySelector("[role=status]").textContent : "",
         shown: document.body.innerText.includes("Exact Key"),
       };
     });
@@ -128,13 +130,12 @@ test("owner key stays in memory and is sent without a re-render", async () => {
     assert.equal(afterSave.status, "Owner key saved on this phone");
     assert.equal(afterSave.shown, false);
     assert.equal(capture.lists, listsBefore);
-    await page.click("#photos-body .move-panel button");
-    await page.evaluate(() => document.querySelector('[data-section="posts"]').scrollIntoView({ block: "center" }));
-    await page.click('[data-section="posts"] .acc-toggle');
-    await page.waitForSelector("#posts-body details summary");
-    await page.evaluate(() => document.querySelector("#posts-body details").scrollIntoView({ block: "center" }));
-    await page.click("#posts-body details summary");
-    await page.click("#posts-body .move-panel button");
+    await page.click("#owner-open-manage");
+    await page.waitForSelector("#manage-dialog:not([hidden])");
+    await page.click("#manage-tab-settings");
+    await page.click("#manage-dialog details summary");
+    await page.click("#manage-dialog .move-panel button");
+    await page.click("#manage-dialog .move-panel button");
     assert.deepEqual(capture.moves.map((item) => item.token), ["Exact Key", "Exact Key"]);
     assert.ok(capture.worker > 0);
   } finally {

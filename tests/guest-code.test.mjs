@@ -133,6 +133,14 @@ async function newPage(browser, state) {
       request.respond({ status: 200, contentType: "application/json", body: emptyBoard });
       return;
     }
+    if (url.includes("api.weather.gov")) {
+      request.respond({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ properties: { periods: [] } }),
+      });
+      return;
+    }
     if (host === "127.0.0.1" || host === "localhost") {
       request.continue();
       return;
@@ -218,10 +226,13 @@ test("remembered guest code is per game, forgettable, and dropped when rejected"
         return orig(key, value);
       };
     });
-    await page.click("#photos-body details summary");
-    await page.type("#photos-body details input", OWNER);
-    await page.click("#photos-body details button");
+    await page.click("#owner-entry");
+    await page.waitForSelector("#owner-key-dialog:not([hidden]) #owner-key-input");
+    await page.type("#owner-key-input", OWNER);
+    await page.click("#owner-key-dialog button[type=submit]");
     await page.waitForFunction(() => document.body.innerText.includes("Owner key saved on this phone"));
+    await page.click("#owner-key-close");
+    await page.waitForSelector("#owner-key-dialog[hidden]");
     const afterOwner = await storageOf(page);
     assert.equal(afterOwner.session[OWNER_KEY], OWNER);
     assert.equal(afterOwner.local[OWNER_KEY], undefined);

@@ -70,6 +70,24 @@ assert.ok(lsu.covered[1].detail.includes("24 individual drinks"));
 assert.ok(!/high noon|nutrl|twelve-pack|brand/i.test(lsu.covered[1].detail) || /not a specific brand/i.test(lsu.covered[1].detail));
 assert.ok(/not set/i.test(lsu.covered[2].detail));
 assert.strictEqual(lsu.celebration, "(also Amy\u2019s 55th birthday)");
+assert.strictEqual(
+  JSON.stringify(lsu.weather),
+  JSON.stringify({
+    place: "Knoxville",
+    latitude: 35.955,
+    longitude: -83.925,
+    gameDate: "2026-11-21",
+    timeZone: "America/New_York",
+    sourceName: "National Weather Service",
+    sourceUrl: "https://forecast.weather.gov/MapClick.php?lat=35.9550&lon=-83.9250",
+  }),
+);
+assert.strictEqual(kentucky.weather, undefined);
+assert.strictEqual(alabama.weather, undefined);
+assert.ok(fs.readFileSync("index.html", "utf8").includes("weather.js"));
+assert.ok(!fs.readFileSync("kentucky/index.html", "utf8").includes("weather.js"));
+assert.ok(!fs.readFileSync("alabama/index.html", "utf8").includes("weather.js"));
+assert.ok(!/Daytime temperature \d/.test(fs.readFileSync("weather.js", "utf8")));
 assert.strictEqual(lsu.banner, "Tennessee vs LSU");
 assert.strictEqual(lsu.location.title, "Smokey Blue Lawn, space SB10");
 assert.ok(!lsu.location.status);

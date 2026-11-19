@@ -1,6 +1,7 @@
 "use strict";
 (function () {
   var gameId = document.body && document.body.dataset.game;
+  var preview = Boolean(document.body && document.body.dataset.preview === "1");
   var game = (window.TAILGATE_GAMES || {})[gameId];
   var photos = document.getElementById("photos-body");
   var posts = document.getElementById("posts-body");
@@ -25,6 +26,7 @@
     return el("p", { class: "hint" }, text);
   }
   function mediaBase() {
+    if (preview) return "https://preview.invalid";
     if (game.mediaApi) return String(game.mediaApi).replace(/\/$/, "");
     var host = location.hostname;
     if (host !== "127.0.0.1" && host !== "localhost") return "";
@@ -38,8 +40,8 @@
     return;
   }
 
-  var pinKey = "tailgate-media-pin-" + gameId;
-  var ownerKey = "tailgate-owner-key-" + gameId;
+  var pinKey = "tailgate-media-pin-" + gameId + (preview ? "-preview" : "");
+  var ownerKey = "tailgate-owner-key-" + gameId + (preview ? "-preview" : "");
   var ownerMemory = "";
   var pin = "";
   var pinRound = 0;
@@ -69,6 +71,8 @@
     if (pin) savePin(pin);
   }
   try { ownerMemory = sessionStorage.getItem(ownerKey) || ""; } catch (error) { ownerMemory = ""; }
+  // Placeholder for the sample preview only. It is not a guest code and is sent only to the preview stub.
+  if (preview && !pin) pin = "preview";
 
   function guestHeaders(extra) {
     var headers = { "x-guest-pin": pin };
@@ -229,64 +233,125 @@
     return run(items, batchId, batchSize);
   }
 
+  function mediaType(file) {
+    return String(file.contentType || "").split(";")[0].trim().toLowerCase();
+  }
+  function videoType(file) {
+    var type = mediaType(file);
+    if (type === "video/mp4" || type === "video/webm" || type === "video/quicktime") return type;
+    return file.preview === "video" ? "video/mp4" : "";
+  }
+  function metaLine(file) {
+    return [file.uploadedBy, when(file.createdAt), sizeLabel(file.bytes)].filter(Boolean).join(" · ");
+  }
+  function downloadOriginal(file, target) {
+    fetch(api + "/v1/" + gameId + "/files/" + file.id, { headers: guestHeaders() })
+      .then(function (response) { if (!response.ok) throw new Error("download"); return response.blob(); })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var link = el("a", { href: url, download: file.name });
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+      })
+      .catch(function () { target.append(note("Could not download that file.")); });
+  }
   function fileCard(file) {
-    var card = el("article", { class: file.preview === "none" ? "file-tile" : "shot" });
+    var playable = Boolean(videoType(file));
+    var image = file.preview === "image";
+    var card = el("article", { class: image || playable ? "shot" : "file-tile" });
     var meta = el("div", { class: "file-tile" },
       el("p", { class: "row-title" }, file.name),
-      el("p", { class: "row-meta" }, [file.uploadedBy, when(file.createdAt), sizeLabel(file.bytes)].filter(Boolean).join(" · "))
+      el("p", { class: "row-meta" }, metaLine(file))
     );
     var download = el("button", { type: "button", class: "btn" }, "Download original");
-    download.addEventListener("click", function () {
-      fetch(api + "/v1/" + gameId + "/files/" + file.id, { headers: guestHeaders() })
-        .then(function (response) { if (!response.ok) throw new Error("download"); return response.blob(); })
-        .then(function (blob) {
-          var link = el("a", { href: URL.createObjectURL(blob), download: file.name });
-          link.click();
-        })
-        .catch(function () { meta.append(note("Could not download that file.")); });
-    });
+    download.addEventListener("click", function () { downloadOriginal(file, meta); });
     meta.append(download);
-    if (ownerToken()) {
-      var removeFile = el("button", { type: "button", class: "btn ghost" }, "Remove file");
-      removeFile.addEventListener("click", function () {
-        fetch(api + "/v1/" + gameId + "/files/" + file.id, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
-          .then(function (response) { if (response.ok) loadFiles(); });
-      });
-      meta.append(removeFile);
-    }
-    if (file.preview === "none") {
+    if (!image && !playable) {
       meta.prepend(note("This browser can't preview this file. The original is unchanged."));
       card.append(meta);
       return card;
     }
-    fetch(api + "/v1/" + gameId + "/files/" + file.id + "?inline=1", { headers: guestHeaders() })
+    var open = el("button", {
+      type: "button",
+      class: image ? "shot-open" : "btn shot-launch",
+      "aria-label": "Open " + file.name,
+    }, image ? "Open photo" : "Open video");
+    open.addEventListener("click", function () { showViewer(file.id, open); });
+    var holder = el("div");
+    if (playable) card.append(holder, open, meta);
+    else card.append(open, meta);
+    fetch(api + "/v1/" + gameId + "/files/" + file.id + (playable ? "" : "?inline=1"), { headers: guestHeaders() })
       .then(function (response) { if (!response.ok) throw new Error("preview"); return response.blob(); })
       .then(function (blob) {
         var url = URL.createObjectURL(blob);
-        var view = file.preview === "video" ? el("video", { controls: "", src: url }) : el("img", { src: url, alt: file.name });
-        card.prepend(view);
+        if (playable) {
+          var video = el("video", { controls: "", playsinline: "", preload: "metadata" });
+          video.playsInline = true;
+          video.setAttribute("playsinline", "");
+          video.addEventListener("error", function () {
+            holder.replaceChildren(note("This browser could not play this video. You can download it instead."));
+          });
+          holder.replaceChildren(video);
+          video.src = url;
+          return;
+        }
+        open.replaceChildren(el("img", { src: url, alt: "" }));
       })
-      .catch(function () { meta.prepend(note("Preview failed. The original can still be downloaded.")); });
-    card.append(meta);
+      .catch(function () {
+        var message = note("Preview failed. The original can still be downloaded.");
+        if (playable) holder.replaceChildren(message);
+        else meta.prepend(message);
+      });
     return card;
   }
 
+  var galleryFiles = [];
+  var messagePosts = [];
+  var showViewer = function () {};
+  function viewerSource() {
+    return galleryFiles.filter(function (file) { return file.preview === "image" || videoType(file); });
+  }
   function renderFiles(data) {
-    var name = el("input", { class: "input", maxLength: "40", autocomplete: "name", placeholder: "Your name" });
+    galleryFiles = data.files || [];
+    var name = el("input", {
+      class: "input",
+      maxLength: "40",
+      autocomplete: "name",
+      placeholder: "Your name",
+      "aria-required": "true",
+      "aria-describedby": "upload-name-error",
+    });
+    var nameError = el("p", { class: "field-error", id: "upload-name-error", role: "alert" });
+    nameError.hidden = true;
     var picker = el("input", { class: "file-input", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
     var list = el("div", { class: "gallery" });
-    (data.files || []).forEach(function (file) { list.append(fileCard(file)); });
+    galleryFiles.forEach(function (file) { list.append(fileCard(file)); });
+    name.addEventListener("input", function () {
+      if (!name.value.trim()) return;
+      name.removeAttribute("aria-invalid");
+      nameError.hidden = true;
+      nameError.textContent = "";
+    });
     var batchError = el("p", { class: "field-error", role: "alert" });
     batchError.hidden = true;
     var form = el("form", { class: "stack" },
-      el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Your name (required)"), name, nameError),
       el("label", { class: "field" }, el("span", { class: "label" }, "Photos and videos"), picker),
       batchError,
       el("button", { type: "submit", class: "btn" }, "Upload")
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      if (!name.value.trim() || !picker.files.length) return;
+      if (!name.value.trim()) {
+        name.setAttribute("aria-invalid", "true");
+        nameError.hidden = false;
+        nameError.textContent = "Name is required";
+        name.focus();
+        return;
+      }
+      if (!picker.files.length) return;
       if (picker.files.length > 50) {
         batchError.hidden = false;
         batchError.textContent = "Choose 50 files or fewer at a time.";
@@ -303,7 +368,8 @@
       form
     );
     if (batchHost) photos.append(batchHost);
-    photos.append(list, forgetButton(), ownerTools());
+    photos.append(list, forgetButton());
+    refreshManage();
   }
 
   var POST_LIMIT = 5000;
@@ -354,6 +420,7 @@
   }
 
   function renderPosts(data) {
+    messagePosts = data.posts || [];
     var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name", autocomplete: "name" });
     var text = messageBox("Write a message");
     var error = el("div");
@@ -398,63 +465,569 @@
           el("p", { class: "hint" }, when(reply.createdAt)),
           messageBody(reply.text)
         );
-        if (ownerToken()) {
-          var removeReply = el("button", { type: "button", class: "btn ghost" }, "Remove reply");
-          removeReply.addEventListener("click", function () {
-            fetch(api + "/v1/" + gameId + "/posts/" + post.id + "/replies/" + reply.id, {
-              method: "DELETE",
-              headers: guestHeaders({ "x-owner-token": ownerToken() }),
-            }).then(function (response) { if (response.ok) loadPosts(); });
-          });
-          replyBlock.append(removeReply);
-        }
         block.append(replyBlock);
       });
       block.append(replyForm(post));
-      if (ownerToken()) {
-        var remove = el("button", { type: "button", class: "btn ghost" }, "Remove message");
-        remove.addEventListener("click", function () {
-          fetch(api + "/v1/" + gameId + "/posts/" + post.id, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
-            .then(function (response) { if (response.ok) loadPosts(); });
-        });
-        block.append(remove);
-      }
       list.append(block);
     });
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
     refresh.addEventListener("click", loadPosts);
-    posts.replaceChildren(form, refresh, list, ownerTools());
+    posts.replaceChildren(form, refresh, list);
+    refreshManage();
   }
 
-  function ownerTools() {
-    var input = el("input", {
+  var refreshManage = function () {};
+
+  function setupChrome() {
+    var entry = el("button", { type: "button", id: "owner-entry", class: "owner-entry", "aria-haspopup": "dialog" }, "Owner");
+    var header = document.querySelector("header");
+    if (header) header.append(entry);
+    if (preview && !document.querySelector(".preview-banner")) {
+      document.body.prepend(el(
+        "p",
+        { class: "preview-banner", role: "note" },
+        "Preview only. These photos and messages are samples, not the live tailgate. Choose Owner and type any word to open Manage. That word stays in this preview and is not a real owner key."
+      ));
+    }
+
+    var dialogReturn = new WeakMap();
+    var dialogStack = [];
+    function focusable(root) {
+      return Array.prototype.filter.call(
+        root.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), video, [tabindex]"),
+        function (node) {
+          if (node.getAttribute("tabindex") === "-1") return false;
+          var style = window.getComputedStyle(node);
+          return style.display !== "none" && style.visibility !== "hidden" && node.getClientRects().length > 0;
+        }
+      );
+    }
+    function trapTab(event, root) {
+      var items = focusable(root);
+      if (!items.length) { event.preventDefault(); return; }
+      var first = items[0];
+      var last = items[items.length - 1];
+      var active = document.activeElement;
+      if (event.shiftKey && (active === first || !root.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !root.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    function syncInert() {
+      var top = null;
+      dialogStack.forEach(function (node) { if (node && !node.hidden) top = node; });
+      Array.prototype.forEach.call(document.body.children, function (node) {
+        if (!top || node === top) node.removeAttribute("inert");
+        else node.setAttribute("inert", "");
+      });
+      document.body.style.overflow = top ? "hidden" : "";
+    }
+    function pushDialog(dialog) {
+      dialogStack = dialogStack.filter(function (item) { return item !== dialog; });
+      dialogStack.push(dialog);
+    }
+    function openDialog(dialog, focusNode) {
+      dialogReturn.set(dialog, document.activeElement);
+      dialog.hidden = false;
+      pushDialog(dialog);
+      syncInert();
+      if (focusNode && focusNode.focus) focusNode.focus();
+    }
+    function closeDialog(dialog, focusNode) {
+      if (!dialog || dialog.hidden) return;
+      dialog.hidden = true;
+      dialogStack = dialogStack.filter(function (item) { return item !== dialog; });
+      syncInert();
+      var back = focusNode || dialogReturn.get(dialog);
+      if (back && back.focus && document.contains(back)) back.focus();
+      else if (document.contains(entry)) entry.focus();
+    }
+    function onDialogKeys(dialog, onEscape) {
+      dialog.addEventListener("keydown", function (event) {
+        if (dialog.hidden) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          onEscape();
+          return;
+        }
+        if (event.key === "Tab") trapTab(event, dialog);
+      });
+    }
+
+    var viewerFiles = [];
+    var viewerIndex = 0;
+    var viewerReturn = null;
+    var viewer = null;
+    var viewerObjectUrl = "";
+    var paintToken = 0;
+    function revokeViewerUrl() {
+      if (!viewerObjectUrl) return;
+      URL.revokeObjectURL(viewerObjectUrl);
+      viewerObjectUrl = "";
+    }
+    showViewer = function (fileId, returnTo) {
+      viewerFiles = viewerSource();
+      if (!viewerFiles.length) return;
+      viewerIndex = 0;
+      viewerFiles.forEach(function (item, itemIndex) { if (item.id === fileId) viewerIndex = itemIndex; });
+      viewerReturn = returnTo || document.activeElement;
+      if (!viewer) viewer = buildViewer();
+      paintViewer();
+      viewer.hidden = false;
+      pushDialog(viewer);
+      syncInert();
+      var closer = viewer.querySelector(".viewer-close");
+      if (closer) closer.focus();
+    }
+    function closeViewer() {
+      if (!viewer || viewer.hidden) return;
+      viewer.hidden = true;
+      dialogStack = dialogStack.filter(function (item) { return item !== viewer; });
+      syncInert();
+      if (viewerReturn && viewerReturn.focus && document.contains(viewerReturn)) viewerReturn.focus();
+      else if (document.contains(entry)) entry.focus();
+    }
+    function stepViewer(delta) {
+      var next = viewerIndex + delta;
+      if (next < 0 || next >= viewerFiles.length) return;
+      viewerIndex = next;
+      paintViewer();
+    }
+    function paintViewer() {
+      var file = viewerFiles[viewerIndex];
+      if (!viewer || !file) return;
+      var token = ++paintToken;
+      var stage = viewer.querySelector(".viewer-media");
+      var count = viewer.querySelector(".viewer-count");
+      var title = viewer.querySelector("#viewer-title");
+      var byline = viewer.querySelector(".byline");
+      count.textContent = (viewerIndex + 1) + " of " + viewerFiles.length + ", " + (file.name || "file");
+      title.textContent = file.name || "File";
+      var bits = [file.uploadedBy, when(file.createdAt), file.bytes ? sizeLabel(file.bytes) : "", file.contentType || ""].filter(Boolean);
+      byline.textContent = bits.length ? bits.join(" · ") : "No other details are stored for this file yet.";
+      viewer.querySelectorAll(".viewer-prev").forEach(function (button) { button.disabled = viewerIndex === 0; });
+      viewer.querySelectorAll(".viewer-next").forEach(function (button) { button.disabled = viewerIndex === viewerFiles.length - 1; });
+      stage.replaceChildren(el("p", { class: "viewer-note" }, "Loading…"));
+      var kind = videoType(file);
+      fetch(api + "/v1/" + gameId + "/files/" + file.id + (kind ? "" : "?inline=1"), { headers: guestHeaders() })
+        .then(function (response) { if (!response.ok) throw new Error("preview"); return response.blob(); })
+        .then(function (blob) {
+          if (token !== paintToken) return;
+          revokeViewerUrl();
+          var url = URL.createObjectURL(blob);
+          viewerObjectUrl = url;
+          if (kind) {
+            var video = el("video", { controls: "", playsinline: "", preload: "metadata" });
+            video.playsInline = true;
+            video.muted = true;
+            video.setAttribute("playsinline", "");
+            video.addEventListener("error", function () {
+              if (token !== paintToken) return;
+              stage.replaceChildren(el("p", { class: "viewer-note" }, "This browser could not play this video. You can download it instead."));
+            });
+            stage.replaceChildren(video);
+            video.src = url;
+            return;
+          }
+          stage.replaceChildren(el("img", { src: url, alt: file.name || "Photo" }));
+        })
+        .catch(function () {
+          if (token !== paintToken) return;
+          stage.replaceChildren(el("p", { class: "viewer-note" }, "Preview failed. The original can still be downloaded."));
+        });
+    }
+    function buildViewer() {
+      var stage = el("div", { class: "viewer-stage" });
+      var count = el("p", { class: "viewer-count", "aria-live": "polite" });
+      var close = el("button", { type: "button", class: "vbtn viewer-close" }, "Close");
+      close.setAttribute("aria-label", "Close viewer");
+      var download = el("button", { type: "button", class: "vbtn viewer-download" }, "Download");
+      download.setAttribute("aria-label", "Download original");
+      var prev = el("button", { type: "button", class: "vbtn viewer-prev" }, "Previous");
+      var next = el("button", { type: "button", class: "vbtn viewer-next" }, "Next");
+      var prevSide = el("button", { type: "button", class: "vbtn vside prev viewer-prev" }, "Previous");
+      var nextSide = el("button", { type: "button", class: "vbtn vside next viewer-next" }, "Next");
+      prev.setAttribute("aria-label", "Previous photo");
+      next.setAttribute("aria-label", "Next photo");
+      prevSide.setAttribute("aria-label", "Previous photo");
+      nextSide.setAttribute("aria-label", "Next photo");
+      var title = el("h2", { id: "viewer-title" });
+      var byline = el("p", { class: "byline" });
+      var panel = el("div", { class: "viewer-panel" }, title, byline, el("p", { class: "hint" }, "Captions and comments come later. This shows the file name and the details already stored with it."));
+      function go(delta) { return function () { stepViewer(delta); }; }
+      prev.addEventListener("click", go(-1));
+      prevSide.addEventListener("click", go(-1));
+      next.addEventListener("click", go(1));
+      nextSide.addEventListener("click", go(1));
+      close.addEventListener("click", closeViewer);
+      download.addEventListener("click", function () { downloadOriginal(viewerFiles[viewerIndex], stage); });
+      var media = el("div", { class: "viewer-media" });
+      stage.append(prevSide, nextSide, media);
+      var root = el("div", {
+        id: "viewer",
+        class: "viewer",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-labelledby": "viewer-title",
+        hidden: "",
+      });
+      root.append(
+        el("div", { class: "viewer-bar" }, close, count, download),
+        el("div", { class: "viewer-body" }, stage, panel),
+        el("div", { class: "viewer-nav" }, prev, next)
+      );
+      var startX = 0;
+      stage.addEventListener("touchstart", function (event) {
+        if (!event.changedTouches || !event.changedTouches.length) return;
+        startX = event.changedTouches[0].clientX;
+      }, { passive: true });
+      stage.addEventListener("touchend", function (event) {
+        if (!event.changedTouches || !event.changedTouches.length) return;
+        var delta = event.changedTouches[0].clientX - startX;
+        if (delta > 40) stepViewer(-1);
+        if (delta < -40) stepViewer(1);
+      }, { passive: true });
+      root.addEventListener("keydown", function (event) {
+        if (root.hidden) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          closeViewer();
+          return;
+        }
+        if (event.key === "ArrowLeft") { event.preventDefault(); stepViewer(-1); }
+        if (event.key === "ArrowRight") { event.preventDefault(); stepViewer(1); }
+        if (event.key === "Tab") trapTab(event, root);
+      });
+      document.body.append(root);
+      return root;
+    }
+
+    var manageDialog = null;
+    var modList = null;
+    var modEmpty = null;
+    var modFilter = "all";
+    var filterButtons = {};
+    var confirmDialog = null;
+    var confirmTitle = null;
+    var confirmBody = null;
+    var confirmError = null;
+    var confirmGo = null;
+    var confirmCancel = null;
+    var pendingDelete = null;
+    var manageTitle = null;
+
+    function gameLabel() {
+      if (gameId === "lsu") return "LSU";
+      if (gameId === "kentucky") return "Kentucky";
+      if (gameId === "alabama") return "Alabama";
+      return gameId;
+    }
+    function ownerDelete(url) {
+      return fetch(url, { method: "DELETE", headers: guestHeaders({ "x-owner-token": ownerToken() }) })
+        .then(function (response) {
+          return response.json().catch(function () { return {}; }).then(function (payload) {
+            return { ok: response.ok, payload: payload };
+          });
+        });
+    }
+    function moderationItems() {
+      var items = [];
+      galleryFiles.forEach(function (file) {
+        var kind = videoType(file) ? "Video" : (file.preview === "image" ? "Photo" : "File");
+        items.push({
+          group: "files",
+          kind: kind,
+          title: file.name || "File",
+          meta: [metaLine(file), file.contentType || ""].filter(Boolean).join(" · "),
+          at: file.createdAt || "",
+          detail: (file.name || "This file") + " will be removed from this game. This can't be undone from the page.",
+          run: function () { return ownerDelete(api + "/v1/" + gameId + "/files/" + file.id); },
+        });
+      });
+      messagePosts.forEach(function (post) {
+        items.push({
+          group: "messages",
+          kind: "Message",
+          title: post.name || "Message",
+          excerpt: post.text || "",
+          meta: when(post.createdAt),
+          at: post.createdAt || "",
+          detail: "The message from " + (post.name || "this person") + " will be removed, including its replies. This can't be undone from the page.",
+          run: function () { return ownerDelete(api + "/v1/" + gameId + "/posts/" + post.id); },
+        });
+        (post.replies || []).forEach(function (reply) {
+          items.push({
+            group: "messages",
+            kind: "Reply",
+            title: reply.name || "Reply",
+            excerpt: reply.text || "",
+            meta: "Reply under " + (post.name || "a message") + (when(reply.createdAt) ? " · " + when(reply.createdAt) : ""),
+            at: reply.createdAt || "",
+            detail: "The reply from " + (reply.name || "this person") + " will be removed. This can't be undone from the page.",
+            run: function () { return ownerDelete(api + "/v1/" + gameId + "/posts/" + post.id + "/replies/" + reply.id); },
+          });
+        });
+      });
+      items.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
+      return items;
+    }
+    function paintModeration() {
+      if (!modList) return;
+      var items = moderationItems().filter(function (item) {
+        return modFilter === "all" || item.group === modFilter;
+      });
+      var counts = { all: moderationItems().length, files: 0, messages: 0 };
+      moderationItems().forEach(function (item) { counts[item.group] += 1; });
+      filterButtons.all.textContent = "All " + counts.all;
+      filterButtons.files.textContent = "Photos & videos " + counts.files;
+      filterButtons.messages.textContent = "Messages " + counts.messages;
+      Object.keys(filterButtons).forEach(function (key) {
+        filterButtons[key].setAttribute("aria-pressed", key === modFilter ? "true" : "false");
+      });
+      modList.replaceChildren();
+      items.forEach(function (item) {
+        var del = el("button", { type: "button", class: "btn danger inline" }, "Delete…");
+        del.setAttribute("aria-label", "Delete " + item.kind + " " + item.title);
+        del.addEventListener("click", function () { askDelete(item, del); });
+        var text = el("div");
+        text.append(el("p", { class: "row-title" }, el("span", { class: "pill" }, item.kind), " " + item.title));
+        if (item.excerpt) text.append(el("p", { class: "mod-excerpt" }, item.excerpt));
+        if (item.meta) text.append(el("p", { class: "row-meta" }, item.meta));
+        modList.append(el("li", { class: "mod-row" }, text, el("div", { class: "mod-actions" }, del)));
+      });
+      modEmpty.hidden = items.length > 0;
+      modEmpty.textContent = counts.all ? "Nothing in this list." : "Nothing to review yet.";
+    }
+    function askDelete(item, source) {
+      pendingDelete = item;
+      confirmTitle.textContent = "Delete this " + item.kind.toLowerCase() + "?";
+      confirmBody.textContent = item.detail;
+      confirmError.textContent = "";
+      openDialog(confirmDialog, confirmCancel);
+      dialogReturn.set(confirmDialog, source);
+    }
+    function group(title, children) {
+      var box = el("div", { class: "setgroup" }, el("h3", null, title));
+      for (var i = 0; i < children.length; i++) box.append(children[i]);
+      return box;
+    }
+    function buildManage() {
+      var back = el("button", { type: "button", class: "manage-back" }, "Back to the " + gameLabel() + " page");
+      manageTitle = el("h1", { id: "manage-title", tabindex: "-1" }, "Manage " + gameLabel());
+      var modTab = el("button", { type: "button", id: "manage-tab-moderation" }, "Moderation");
+      var setTab = el("button", { type: "button", id: "manage-tab-settings" }, "Settings");
+      modList = el("ul", { class: "mod-list" });
+      modEmpty = el("p", { class: "hint" }, "Nothing to review yet.");
+      filterButtons = {
+        all: el("button", { type: "button", class: "lchip", "aria-pressed": "true" }, "All"),
+        files: el("button", { type: "button", class: "lchip", "aria-pressed": "false" }, "Photos & videos"),
+        messages: el("button", { type: "button", class: "lchip", "aria-pressed": "false" }, "Messages"),
+      };
+      Object.keys(filterButtons).forEach(function (key) {
+        filterButtons[key].addEventListener("click", function () {
+          modFilter = key;
+          paintModeration();
+        });
+      });
+      var modPanel = el("div", { id: "manage-moderation" },
+        el("p", { class: "hint" }, "Newest first. Delete asks once more, then removes the item. Hiding, captions, and comments are not part of this update."),
+        el("div", { class: "chip-row", role: "group", "aria-label": "Show" }, filterButtons.all, filterButtons.files, filterButtons.messages),
+        modList,
+        modEmpty
+      );
+      var details = el("dl");
+      [["Title", game.heading || ""], ["Date", game.date || ""], ["Kickoff", game.kickoff || "TBD"]].forEach(function (pair) {
+        details.append(el("dt", null, pair[0]), el("dd", null, pair[1]));
+      });
+      var weatherBits = [el("p", { class: "hint" }, gameId === "lsu"
+        ? "The National Weather Service card is on this page. It fills in when the game date is inside the forecast. This panel can't turn it off."
+        : "The weather card is only on the LSU page.")];
+      if (game.weather && /^https:\/\/(?:forecast|www)\.weather\.gov\//.test(game.weather.sourceUrl || "")) {
+        weatherBits.push(el("p", null, el("a", { href: game.weather.sourceUrl, rel: "noopener noreferrer" }, (game.weather.sourceName || "National Weather Service") + " forecast")));
+      }
+      var replaceKey = el("button", { type: "button", class: "btn ghost inline", id: "manage-replace-key" }, "Replace owner key");
+      var setPanel = el("div", { id: "manage-settings", hidden: "" }, el("div", { class: "manage-grid" },
+        el("div", null,
+          group("Game details", [details, el("p", { class: "hint" }, "Title, date, and kickoff are part of this page. This panel can't change them.")]),
+          group("Weather card", weatherBits),
+          group("Sharing", [el("p", { class: "hint" }, "Uploads and messages follow the site switches. This panel can't turn them off, and it can't change storage limits.")])
+        ),
+        el("div", null,
+          group("Guest code", [
+            el("p", { class: "secret-code", "aria-label": "Guest code hidden" }, "••••"),
+            el("p", { class: "hint" }, "The guest code is never shown here. Changing it is not part of this update."),
+          ]),
+          group("This phone", [
+            el("p", { class: "hint", id: "manage-owner-status", role: "status" }, "Owner key saved on this phone"),
+            replaceKey,
+          ]),
+          rareTools()
+        )
+      ));
+      manageDialog = el("div", {
+        id: "manage-dialog",
+        class: "manage",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-labelledby": "manage-title",
+        hidden: "",
+      }, el("div", { class: "manage-in" }, back, manageTitle, el("div", { class: "manage-tabs", role: "group", "aria-label": "Manage sections" }, modTab, setTab), modPanel, setPanel));
+      function showTab(name) {
+        var moderation = name !== "settings";
+        modPanel.hidden = !moderation;
+        setPanel.hidden = moderation;
+        if (moderation) modTab.setAttribute("aria-current", "page");
+        else modTab.removeAttribute("aria-current");
+        if (!moderation) setTab.setAttribute("aria-current", "page");
+        else setTab.removeAttribute("aria-current");
+        if (moderation) paintModeration();
+      }
+      back.addEventListener("click", function () { closeDialog(manageDialog); });
+      modTab.addEventListener("click", function () { showTab("moderation"); });
+      setTab.addEventListener("click", function () { showTab("settings"); });
+      replaceKey.addEventListener("click", openKeyDialog);
+      onDialogKeys(manageDialog, function () { closeDialog(manageDialog); });
+      document.body.append(manageDialog);
+      showTab("moderation");
+    }
+    function rareTools() {
+      var move = moveControls();
+      if (!move) return el("div");
+      var details = el("details", { class: "setgroup" }, el("summary", null, "Rare tools"));
+      details.append(
+        el("p", { class: "hint" }, "Move LSU photos, videos, and messages to Kentucky. Review shows whether that move is already finished. Originals are removed only after each copy is checked."),
+        move
+      );
+      return details;
+    }
+    function openManagePanel() {
+      if (!ownerToken()) {
+        openKeyDialog();
+        return;
+      }
+      if (!manageDialog) buildManage();
+      paintModeration();
+      var status = document.getElementById("manage-owner-status");
+      if (status) status.textContent = "Owner key saved on this phone";
+      openDialog(manageDialog, manageTitle);
+    }
+
+    confirmTitle = el("h2", { id: "delete-title" });
+    confirmBody = el("p", null, "");
+    confirmError = el("p", { class: "field-error", role: "alert" });
+    confirmCancel = el("button", { type: "button", class: "btn ghost" }, "Cancel");
+    confirmGo = el("button", { type: "button", class: "btn danger" }, "Delete");
+    var confirmPanel = el("div", { class: "modal-panel" }, confirmTitle, confirmBody, confirmError, confirmCancel, confirmGo);
+    confirmDialog = el("div", {
+      id: "delete-dialog",
+      class: "modal confirm-dialog",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "delete-title",
+      hidden: "",
+    }, confirmPanel);
+    confirmCancel.addEventListener("click", function () { closeDialog(confirmDialog); });
+    confirmGo.addEventListener("click", function () {
+      if (!pendingDelete) return;
+      confirmGo.disabled = true;
+      pendingDelete.run().then(function (result) {
+        confirmGo.disabled = false;
+        if (!result.ok) {
+          confirmError.textContent = (result.payload && result.payload.error) || "Could not delete that.";
+          return;
+        }
+        pendingDelete = null;
+        closeDialog(confirmDialog, manageTitle);
+        return loadAll();
+      }).catch(function () {
+        confirmGo.disabled = false;
+        confirmError.textContent = "Could not delete that.";
+      });
+    });
+    confirmDialog.addEventListener("click", function (event) {
+      if (event.target === confirmDialog) closeDialog(confirmDialog);
+    });
+    onDialogKeys(confirmDialog, function () { closeDialog(confirmDialog); });
+    document.body.append(confirmDialog);
+
+    var keyInput = el("input", {
       class: "input",
       type: "password",
+      id: "owner-key-input",
       autocomplete: "off",
       autocapitalize: "off",
       autocorrect: "off",
       spellcheck: "false",
-      placeholder: "Owner key",
     });
-    var saved = el("p", { class: "hint", role: "status" });
-    var form = el("form", { class: "stack" },
-      el("p", { class: "hint" }, "Owner key removes messages or files. Guests do not get this."),
-      input,
-      el("button", { type: "submit", class: "btn ghost" }, "Save owner key on this phone"),
-      saved
+    var keyStatus = el("p", { class: "hint", id: "owner-key-status", role: "status" });
+    var keyForm = el("form", { class: "stack" },
+      el("p", { class: "hint" }, "The owner key removes files or messages. A guest code cannot do that."),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Owner key"), keyInput),
+      keyStatus,
+      el("button", { type: "submit", class: "btn" }, "Save owner key on this phone")
     );
-    form.addEventListener("submit", function (event) {
+    var openManageBtn = el("button", { type: "button", class: "btn", id: "owner-open-manage" }, "Open Manage");
+    openManageBtn.hidden = true;
+    var keyClose = el("button", { type: "button", class: "btn ghost", id: "owner-key-close" }, "Close");
+    var keyPanel = el("div", { class: "modal-panel" }, el("h2", { id: "owner-dialog-title" }, "Owner key"), keyForm, openManageBtn, keyClose);
+    var keyDialog = el("div", {
+      id: "owner-key-dialog",
+      class: "modal",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "owner-dialog-title",
+      hidden: "",
+    }, keyPanel);
+    function syncEntry() {
+      var on = Boolean(ownerToken());
+      entry.textContent = on ? "Manage" : "Owner";
+      entry.setAttribute("aria-label", on ? "Manage this game" : "Enter the owner key");
+      entry.setAttribute("aria-controls", on ? "manage-dialog" : "owner-key-dialog");
+    }
+    function openKeyDialog() {
+      keyInput.value = "";
+      if (ownerToken()) {
+        keyStatus.textContent = "An owner key is already saved on this phone.";
+        openManageBtn.hidden = false;
+      }
+      openDialog(keyDialog, keyInput);
+    }
+    keyForm.addEventListener("submit", function (event) {
       event.preventDefault();
-      var next = input.value.trim();
+      var next = keyInput.value.trim();
       if (!next) return;
+      // Keep the key in memory and do not reload photos or messages. A reload closed the tools and dropped a key the phone could not store.
       saveOwnerToken(next);
-      input.value = "";
-      saved.textContent = "Owner key saved on this phone";
+      keyInput.value = "";
+      keyStatus.textContent = "Owner key saved on this phone";
+      openManageBtn.hidden = false;
+      syncEntry();
     });
-    var details = el("details", null, el("summary", null, "Owner tools"), form);
-    var move = moveControls();
-    if (move) details.append(move);
-    return details;
+    openManageBtn.addEventListener("click", function () {
+      keyDialog.hidden = true;
+      dialogStack = dialogStack.filter(function (item) { return item !== keyDialog; });
+      openManagePanel();
+      dialogReturn.set(manageDialog, entry);
+    });
+    keyClose.addEventListener("click", function () { closeDialog(keyDialog); });
+    keyDialog.addEventListener("click", function (event) {
+      if (event.target === keyDialog) closeDialog(keyDialog);
+    });
+    onDialogKeys(keyDialog, function () { closeDialog(keyDialog); });
+    document.body.append(keyDialog);
+    entry.addEventListener("click", function () {
+      if (ownerToken()) openManagePanel();
+      else openKeyDialog();
+    });
+    syncEntry();
+    refreshManage = function () {
+      if (manageDialog && !manageDialog.hidden) paintModeration();
+    };
   }
 
   function moveControls() {
@@ -502,7 +1075,10 @@
       if (!requireOwner()) return;
       fetch(api + "/v1/lsu/move-to-kentucky", { headers: guestHeaders(extra()) })
         .then(function (response) { return response.json(); })
-        .then(function (body) { show(body); go.hidden = false; })
+        .then(function (body) {
+          show(body);
+          if (body && body.phase !== "done" && !(body.error && body.files == null)) go.hidden = false;
+        })
         .catch(function () { status.textContent = "Could not review the move."; });
     });
     function run(step) {
@@ -568,6 +1144,7 @@
     pinRound += 1;
     return Promise.all([loadFiles(), loadPosts()]);
   }
+  setupChrome();
   if (!pin) gate("");
   else loadAll();
 })();
