@@ -42,7 +42,32 @@
   var ownerKey = "tailgate-owner-key-" + gameId;
   var ownerMemory = "";
   var pin = "";
-  try { pin = sessionStorage.getItem(pinKey) || ""; } catch (error) { pin = ""; }
+  var pinRound = 0;
+  function readStored(storage, key) {
+    try { return storage.getItem(key) || ""; } catch (error) { return ""; }
+  }
+  function savePin(value) {
+    pin = value;
+    try { localStorage.setItem(pinKey, value); } catch (err) {
+      try { localStorage.removeItem(pinKey); } catch (ignore) {}
+      try { sessionStorage.setItem(pinKey, value); } catch (err2) {}
+    }
+  }
+  function forgetPin() {
+    pin = "";
+    try { localStorage.removeItem(pinKey); } catch (err) {}
+    try { sessionStorage.removeItem(pinKey); } catch (err) {}
+  }
+  function forgetButton() {
+    var forget = el("button", { type: "button", class: "btn ghost" }, "Forget code on this device");
+    forget.addEventListener("click", function () { forgetPin(); gate(""); });
+    return forget;
+  }
+  pin = readStored(localStorage, pinKey);
+  if (!pin) {
+    pin = readStored(sessionStorage, pinKey);
+    if (pin) savePin(pin);
+  }
   try { ownerMemory = sessionStorage.getItem(ownerKey) || ""; } catch (error) { ownerMemory = ""; }
 
   function guestHeaders(extra) {
@@ -78,6 +103,8 @@
   }
 
   function gate(errorText) {
+    if (errorText) forgetPin();
+    pinRound += 1;
     var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Guest code" });
     var error = el("div");
     if (errorText) error.append(el("p", { class: "form-error", role: "alert" }, errorText));
@@ -89,8 +116,7 @@
     );
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      pin = input.value.trim();
-      try { sessionStorage.setItem(pinKey, pin); } catch (err) {}
+      savePin(input.value.trim());
       loadAll();
     });
     photos.replaceChildren(form);
@@ -277,7 +303,7 @@
       form
     );
     if (batchHost) photos.append(batchHost);
-    photos.append(list, ownerTools());
+    photos.append(list, forgetButton(), ownerTools());
   }
 
   var POST_LIMIT = 5000;
@@ -509,26 +535,39 @@
   }
 
   function loadFiles() {
+    var round = pinRound;
     return fetch(api + "/v1/" + gameId + "/files", { headers: guestHeaders() }).then(function (response) {
       return response.json().then(function (payload) { return { status: response.status, payload: payload }; });
     }).then(function (result) {
+      if (round !== pinRound) return;
       if (result.status === 401) { gate("That guest code was not accepted."); return; }
       if (result.status === 503) { photos.replaceChildren(note("Photos and videos aren't available yet. Sharing stays off until storage is turned on.")); return; }
       if (result.status !== 200) { photos.replaceChildren(note(result.payload.error || "Could not load photos.")); return; }
       renderFiles(result.payload);
-    }).catch(function () { photos.replaceChildren(note("Photos and videos aren't available yet.")); });
+    }).catch(function () {
+      if (round !== pinRound) return;
+      photos.replaceChildren(note("Photos and videos aren't available yet."));
+    });
   }
   function loadPosts() {
+    var round = pinRound;
     return fetch(api + "/v1/" + gameId + "/posts", { headers: guestHeaders() }).then(function (response) {
       return response.json().then(function (payload) { return { status: response.status, payload: payload }; });
     }).then(function (result) {
+      if (round !== pinRound) return;
       if (result.status === 401) { gate("That guest code was not accepted."); return; }
       if (result.status === 503) { posts.replaceChildren(note("Messages aren't available yet. The board stays off until storage is turned on.")); return; }
       if (result.status !== 200) { posts.replaceChildren(note(result.payload.error || "Could not load messages.")); return; }
       renderPosts(result.payload);
-    }).catch(function () { posts.replaceChildren(note("Messages aren't available yet.")); });
+    }).catch(function () {
+      if (round !== pinRound) return;
+      posts.replaceChildren(note("Messages aren't available yet."));
+    });
   }
-  function loadAll() { return Promise.all([loadFiles(), loadPosts()]); }
+  function loadAll() {
+    pinRound += 1;
+    return Promise.all([loadFiles(), loadPosts()]);
+  }
   if (!pin) gate("");
   else loadAll();
 })();
