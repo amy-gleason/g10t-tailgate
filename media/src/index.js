@@ -501,9 +501,6 @@ export default {
     const parts = url.pathname.split("/").filter(Boolean);
     if (parts[0] !== "v1" || !GAMES.has(parts[1])) return json({ error: "Unknown game." }, 404, origin);
     const game = parts[1];
-    const guest = authorizedGuest(request, env, game);
-    if (guest === "unconfigured") return json({ error: "Sharing is not configured." }, 503, origin);
-    if (guest !== "ok") return json({ error: "Guest code was not accepted." }, 401, origin);
     try {
       if (parts[2] === "move-to-kentucky") {
         if (game !== "lsu") return json({ error: "That action is not supported." }, 404, origin);
