@@ -535,13 +535,22 @@
   }
   function f(e, t) {
     let n = i("input", { class: "input", value: e });
-    return (
-      t.placeholder && (n.placeholder = t.placeholder),
-      t.maxLength && (n.maxLength = Number(t.maxLength)),
-      t.inputMode && (n.inputMode = t.inputMode),
-      t.autocomplete && n.setAttribute("autocomplete", t.autocomplete),
-      n
-    );
+    if (t.placeholder) n.placeholder = t.placeholder;
+    if (t.maxLength) n.maxLength = Number(t.maxLength);
+    if (t.inputMode) n.inputMode = t.inputMode;
+    if (t.autocomplete) n.setAttribute("autocomplete", t.autocomplete);
+    if (t.remember) {
+      n.setAttribute("data-guest-name", "");
+      n.addEventListener("input", () => {
+        let next = n.value.trim().slice(0, 40);
+        s.name = next;
+        J(ee, next);
+        document.querySelectorAll("[data-guest-name]").forEach((field) => {
+          if (field !== n && field.value !== next) field.value = next;
+        });
+      });
+    }
+    return n;
   }
   function h(e) {
     return e
@@ -728,6 +737,7 @@
         placeholder: "Amy",
         maxLength: "40",
         autocomplete: "name",
+        remember: e.remember,
       }),
       n = f(e.qty, { inputMode: "numeric" }),
       r = f(e.note, {
@@ -815,6 +825,7 @@
         placeholder: "Amy",
         maxLength: "40",
         autocomplete: "name",
+        remember: e.remember,
       }),
       n = f(e.guests, { inputMode: "numeric" }),
       r = f(e.note, { maxLength: "160", placeholder: "Other names" }),
@@ -990,6 +1001,7 @@
           ? r.push(
               ae({
                 name: s.name,
+                remember: true,
                 qty: "1",
                 note: "",
                 unit: e.plural,
@@ -1026,6 +1038,7 @@
         placeholder: "Amy",
         maxLength: "40",
         autocomplete: "name",
+        remember: true,
       }),
       o = f("1", { inputMode: "numeric" }),
       a = f("", { maxLength: "160" }),
@@ -1115,6 +1128,7 @@
         placeholder: "Amy",
         maxLength: "40",
         autocomplete: "name",
+        remember: e.remember,
       }),
       n = f(e.amount, { placeholder: "20", inputMode: "decimal" }),
       r = f(e.note, { maxLength: "160" }),
@@ -1322,6 +1336,7 @@
             i("h3", null, "RSVP so we know you're coming!"),
             ue({
               name: s.name,
+              remember: true,
               guests: "1",
               note: "",
               submitLabel: "Add me",
@@ -1404,6 +1419,7 @@
             i("h3", null, "Record a donation"),
             le({
               name: s.name,
+              remember: true,
               amount: "",
               note: "",
               submitLabel: "Add donation",
@@ -1747,6 +1763,10 @@
     var start = (location.hash || "").replace("#", "");
     if (order.indexOf(start) !== -1 && start !== "coming") openSection(start, false);
   }
+
+  window.addEventListener("tailgate-guest-name", (event) => {
+    if (typeof event.detail === "string") s.name = event.detail.slice(0, 40);
+  });
 
   function _e() {
     ((s.name = localStorage.getItem(ee) ?? ""),
