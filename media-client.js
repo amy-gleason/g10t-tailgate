@@ -289,6 +289,78 @@
     if (name && base.indexOf(name) === -1) return base + ", " + name;
     return base;
   }
+  var objectUrls = Object.create(null);
+  var objectLoads = Object.create(null);
+  var viewerHolding = "";
+  var tileJobs = new WeakMap();
+  var tileObserver = null;
+  function fileBytes(file, inline) {
+    var id = file.id;
+    if (objectUrls[id]) return Promise.resolve(objectUrls[id]);
+    if (objectLoads[id]) return objectLoads[id];
+    objectLoads[id] = fetch(api + "/v1/" + gameId + "/files/" + id + (inline ? "?inline=1" : ""), { headers: guestHeaders() })
+      .then(function (response) {
+        if (!response.ok) throw new Error("preview");
+        return response.blob();
+      })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        objectUrls[id] = url;
+        delete objectLoads[id];
+        return url;
+      }, function (error) {
+        delete objectLoads[id];
+        throw error;
+      });
+    return objectLoads[id];
+  }
+  function dropFileBytes(id) {
+    if (!id || id === viewerHolding) return;
+    var url = objectUrls[id];
+    if (!url) return;
+    URL.revokeObjectURL(url);
+    delete objectUrls[id];
+  }
+  function ensureTileObserver() {
+    if (tileObserver) return tileObserver;
+    if (typeof IntersectionObserver !== "function") {
+      tileObserver = {
+        observe: function (card) {
+          var job = tileJobs.get(card);
+          if (job) job.start();
+        },
+        unobserve: function () {},
+        disconnect: function () {},
+      };
+      return tileObserver;
+    }
+    tileObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var job = tileJobs.get(entry.target);
+        if (!job) return;
+        if (entry.isIntersecting) job.start();
+        else job.stop();
+      });
+    }, { root: null, rootMargin: "300px 0px", threshold: 0.01 });
+    return tileObserver;
+  }
+  function releaseOffscreen(id) {
+    if (!id || id === viewerHolding) return;
+    var card = document.querySelector('[data-file-id="' + String(id).replace(/"/g, "") + '"]');
+    if (!card) {
+      dropFileBytes(id);
+      return;
+    }
+    var rect = card.getBoundingClientRect();
+    var near = rect.width > 0 && rect.bottom > -300 && rect.top < window.innerHeight + 300;
+    var job = tileJobs.get(card);
+    if (!near && job) job.stop();
+    else if (!near) dropFileBytes(id);
+  }
+  function clearTileCache() {
+    if (tileObserver && tileObserver.disconnect) tileObserver.disconnect();
+    Object.keys(objectUrls).forEach(function (id) { dropFileBytes(id); });
+  }
   function downloadOriginal(file, target) {
     fetch(api + "/v1/" + gameId + "/files/" + file.id, { headers: guestHeaders() })
       .then(function (response) { if (!response.ok) throw new Error("download"); return response.blob(); })
@@ -318,37 +390,47 @@
       card.append(meta);
       return card;
     }
+    card.setAttribute("data-file-id", file.id);
+    var frame = el("span", { class: playable ? "shot-frame shot-play" : "shot-frame" }, playable ? "Play" : "");
     var open = el("button", {
       type: "button",
-      class: image ? "shot-open" : "btn shot-launch",
+      class: "shot-open",
       "aria-label": openLabel(file),
-    }, image ? "Open photo" : "Open video");
+    }, frame);
     open.addEventListener("click", function () { showViewer(file.id, open); });
-    var holder = el("div");
-    if (playable) card.append(holder, open, meta);
-    else card.append(open, meta);
-    fetch(api + "/v1/" + gameId + "/files/" + file.id + (playable ? "" : "?inline=1"), { headers: guestHeaders() })
-      .then(function (response) { if (!response.ok) throw new Error("preview"); return response.blob(); })
-      .then(function (blob) {
-        var url = URL.createObjectURL(blob);
-        if (playable) {
-          var video = el("video", { controls: "", playsinline: "", preload: "metadata" });
-          video.playsInline = true;
-          video.setAttribute("playsinline", "");
-          video.addEventListener("error", function () {
-            holder.replaceChildren(note("This browser could not play this video. You can download it instead."));
-          });
-          holder.replaceChildren(video);
-          video.src = url;
+    card.append(open, meta);
+    if (playable) return card;
+    var started = false;
+    function start() {
+      if (started) return;
+      started = true;
+      fileBytes(file, true).then(function (url) {
+        if (!started || !card.isConnected) {
+          dropFileBytes(file.id);
           return;
         }
-        open.replaceChildren(el("img", { src: url, alt: mediaAlt(file) }));
-      })
-      .catch(function () {
-        var message = note("Preview failed. The original can still be downloaded.");
-        if (playable) holder.replaceChildren(message);
-        else meta.prepend(message);
+        frame.replaceChildren(el("img", {
+          src: url,
+          alt: mediaAlt(file),
+          width: "4",
+          height: "3",
+          loading: "lazy",
+          decoding: "async",
+        }));
+      }).catch(function () {
+        started = false;
+        if (!card.isConnected) return;
+        meta.prepend(note("Preview failed. The original can still be downloaded."));
       });
+    }
+    function stop() {
+      if (viewerHolding === file.id) return;
+      started = false;
+      frame.replaceChildren();
+      dropFileBytes(file.id);
+    }
+    tileJobs.set(card, { start: start, stop: stop });
+    ensureTileObserver().observe(card);
     return card;
   }
 
@@ -359,6 +441,7 @@
     return galleryFiles.filter(function (file) { return file.preview === "image" || videoType(file); });
   }
   function renderFiles(data) {
+    clearTileCache();
     galleryFiles = data.files || [];
     var name = bindGuestName(el("input", {
       class: "input",
@@ -371,7 +454,7 @@
     var nameError = el("p", { class: "field-error", id: "upload-name-error", role: "alert" });
     nameError.hidden = true;
     var picker = el("input", { class: "file-input", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
-    var list = el("div", { class: "gallery" });
+    var list = el("div", { class: "photo-grid" });
     galleryFiles.forEach(function (file) { list.append(fileCard(file)); });
     name.addEventListener("input", function () {
       if (!name.value.trim()) return;
@@ -694,13 +777,7 @@
     var viewerIndex = 0;
     var viewerReturn = null;
     var viewer = null;
-    var viewerObjectUrl = "";
     var paintToken = 0;
-    function revokeViewerUrl() {
-      if (!viewerObjectUrl) return;
-      URL.revokeObjectURL(viewerObjectUrl);
-      viewerObjectUrl = "";
-    }
     showViewer = function (fileId, returnTo) {
       viewerFiles = viewerSource();
       if (!viewerFiles.length) return;
@@ -720,6 +797,9 @@
       viewer.hidden = true;
       dialogStack = dialogStack.filter(function (item) { return item !== viewer; });
       syncInert();
+      var previous = viewerHolding;
+      viewerHolding = "";
+      releaseOffscreen(previous);
       if (viewerReturn && viewerReturn.focus && document.contains(viewerReturn)) viewerReturn.focus();
       else if (document.contains(entry)) entry.focus();
     }
@@ -746,14 +826,13 @@
       viewer.querySelectorAll(".viewer-prev").forEach(function (button) { button.disabled = viewerIndex === 0; });
       viewer.querySelectorAll(".viewer-next").forEach(function (button) { button.disabled = viewerIndex === viewerFiles.length - 1; });
       stage.replaceChildren(el("p", { class: "viewer-note" }, "Loading…"));
+      var previousHold = viewerHolding;
+      viewerHolding = file.id;
+      if (previousHold && previousHold !== file.id) releaseOffscreen(previousHold);
       var kind = videoType(file);
-      fetch(api + "/v1/" + gameId + "/files/" + file.id + (kind ? "" : "?inline=1"), { headers: guestHeaders() })
-        .then(function (response) { if (!response.ok) throw new Error("preview"); return response.blob(); })
-        .then(function (blob) {
+      fileBytes(file, !kind)
+        .then(function (url) {
           if (token !== paintToken) return;
-          revokeViewerUrl();
-          var url = URL.createObjectURL(blob);
-          viewerObjectUrl = url;
           if (kind) {
             var video = el("video", { controls: "", playsinline: "", preload: "metadata" });
             video.playsInline = true;

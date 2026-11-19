@@ -81,9 +81,9 @@ test("viewer, manage, and delete confirmation stay on the preview stub", async (
     assert.ok(closeBox.width >= 44 && closeBox.height >= 44);
     await page.keyboard.press("ArrowRight");
     const stepped = await page.$eval(".viewer-count", (node) => node.textContent);
-    assert.match(stepped, /2 of 3, rocky-top\.webm/);
+    assert.match(stepped, /2 of 8, rocky-top\.webm/);
     await page.keyboard.press("ArrowLeft");
-    assert.match(await page.$eval(".viewer-count", (node) => node.textContent), /1 of 3, tent-setup\.png/);
+    assert.match(await page.$eval(".viewer-count", (node) => node.textContent), /1 of 8, tent-setup\.png/);
     const viewerAxe = serious(await axe(page, "#viewer"));
     assert.deepEqual(viewerAxe, [], JSON.stringify(viewerAxe));
     await page.keyboard.press("Escape");
