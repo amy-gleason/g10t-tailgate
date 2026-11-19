@@ -149,7 +149,11 @@ body.past-game.phone-jobs[data-job="game"] .acc[data-section="photos"] .acc-pane
   body.phone-jobs[data-job="rsvp"] .job-cards,
   body.phone-jobs[data-job="bring"] .job-cards,
   body.phone-jobs[data-job="photos"] .job-cards,
-  body.phone-jobs[data-job="messages"] .job-cards { display: none; }
+  body.phone-jobs[data-job="messages"] .job-cards,
+  body.past-game.phone-jobs .job-cards { display: none; }
+  body.past-game.phone-jobs[data-job="game"] main { display: flex; flex-direction: column; }
+  body.past-game.phone-jobs[data-job="game"] #sections { order: 1; }
+  body.past-game.phone-jobs[data-job="game"] main > :not(.archive-banner):not(.game-switch):not(#sections) { order: 2; }
   body.phone-jobs .job-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); background: #fff; border-top: 1px solid #d4d4d4; padding-bottom: env(safe-area-inset-bottom); }
   body.phone-jobs .accordion .acc { display: none; }
   body.phone-jobs[data-job="rsvp"] .acc[data-section="coming"],

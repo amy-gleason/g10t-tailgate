@@ -116,6 +116,13 @@ test("the switcher lists next and past games, and a past game hides posting", { 
       .map((node) => node.textContent.trim()));
     assert.deepEqual(prompts, []);
     assert.match(await page.$eval(".archive-banner", (node) => node.textContent), /This game is over/);
+    const archive = await page.evaluate(() => ({
+      cards: getComputedStyle(document.getElementById("job-cards")).display,
+      photos: document.querySelector('.acc[data-section="photos"]').getBoundingClientRect().top,
+      title: document.querySelector("main h1").getBoundingClientRect().top,
+    }));
+    assert.equal(archive.cards, "none");
+    assert.ok(archive.photos < archive.title, "photos lead the past-game page");
     await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
     const wide = await axe(page);
     assert.deepEqual(wide, [], JSON.stringify(wide));
