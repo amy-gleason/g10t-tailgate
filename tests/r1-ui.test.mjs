@@ -70,7 +70,7 @@ test("viewer, manage, and delete confirmation stay on the preview stub", async (
     assert.equal(await page.$("#photos-body details"), null);
     assert.equal(await page.$("#posts-body details"), null);
 
-    const opener = '[aria-label="Open tent-setup.png"]';
+    const opener = '[aria-label="Open photo from Sample guest, tent-setup.png"]';
     await page.click(opener);
     await page.waitForSelector("#viewer:not([hidden])");
     const closeBox = await page.$eval(".viewer-close", (node) => {
@@ -89,7 +89,7 @@ test("viewer, manage, and delete confirmation stay on the preview stub", async (
     await page.keyboard.press("Escape");
     await page.waitForSelector("#viewer[hidden]");
     const returned = await page.evaluate(() => document.activeElement && document.activeElement.getAttribute("aria-label"));
-    assert.equal(returned, "Open tent-setup.png");
+    assert.equal(returned, "Open photo from Sample guest, tent-setup.png");
 
     await page.click("#owner-entry");
     await page.waitForSelector("#owner-key-input");

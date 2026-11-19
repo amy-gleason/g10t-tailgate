@@ -60,11 +60,6 @@
     try { localStorage.removeItem(pinKey); } catch (err) {}
     try { sessionStorage.removeItem(pinKey); } catch (err) {}
   }
-  function forgetButton() {
-    var forget = el("button", { type: "button", class: "btn ghost" }, "Forget code on this device");
-    forget.addEventListener("click", function () { forgetPin(); gate(""); });
-    return forget;
-  }
   pin = readStored(localStorage, pinKey);
   if (!pin) {
     pin = readStored(sessionStorage, pinKey);
@@ -73,6 +68,33 @@
   try { ownerMemory = sessionStorage.getItem(ownerKey) || ""; } catch (error) { ownerMemory = ""; }
   // Placeholder for the sample preview only. It is not a guest code and is sent only to the preview stub.
   if (preview && !pin) pin = "preview";
+  var guestNameKey = "vols-tailgate-name";
+  var guestOk = false;
+  var syncSession = function () {};
+  function readGuestName() {
+    try { return String(localStorage.getItem(guestNameKey) || "").slice(0, 40); } catch (error) { return ""; }
+  }
+  function writeGuestName(value, source) {
+    var next = String(value || "").trim().slice(0, 40);
+    try { localStorage.setItem(guestNameKey, next); } catch (err) {}
+    var fields = document.querySelectorAll("[data-guest-name]");
+    for (var i = 0; i < fields.length; i++) {
+      var node = fields[i];
+      if (node === source) continue;
+      if (node.value !== next) node.value = next;
+    }
+    try { window.dispatchEvent(new CustomEvent("tailgate-guest-name", { detail: next })); } catch (err) {}
+  }
+  function bindGuestName(input) {
+    input.setAttribute("data-guest-name", "");
+    if (!input.value) input.value = readGuestName();
+    input.addEventListener("input", function () { writeGuestName(input.value, input); });
+    input.addEventListener("blur", function () {
+      var next = input.value.trim().slice(0, 40);
+      if (input.value !== next) input.value = next;
+    });
+    return input;
+  }
 
   function guestHeaders(extra) {
     var headers = { "x-guest-pin": pin };
@@ -108,6 +130,7 @@
 
   function gate(errorText) {
     if (errorText) forgetPin();
+    guestOk = false;
     pinRound += 1;
     var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Guest code" });
     var error = el("div");
@@ -125,6 +148,7 @@
     });
     photos.replaceChildren(form);
     posts.replaceChildren(note("Enter the guest code under Photos & videos to open messages."));
+    syncSession();
   }
 
   var batchHost = null;
@@ -244,6 +268,27 @@
   function metaLine(file) {
     return [file.uploadedBy, when(file.createdAt), sizeLabel(file.bytes)].filter(Boolean).join(" · ");
   }
+  function mediaAlt(file) {
+    var caption = String(file.caption || "").replace(/\s+/g, " ").trim();
+    if (caption) return caption.slice(0, 200);
+    var who = String(file.uploadedBy || "").trim();
+    var kind = videoType(file) ? "Video" : (file.preview === "image" ? "Photo" : "File");
+    if (who) return kind + " from " + who;
+    return file.name || kind;
+  }
+  function openLabel(file) {
+    var caption = String(file.caption || "").trim();
+    var base;
+    if (caption) base = "Open " + mediaAlt(file);
+    else {
+      var who = String(file.uploadedBy || "").trim();
+      var kind = videoType(file) ? "video" : (file.preview === "image" ? "photo" : "file");
+      base = who ? "Open " + kind + " from " + who : "Open " + (file.name || kind);
+    }
+    var name = String(file.name || "").trim();
+    if (name && base.indexOf(name) === -1) return base + ", " + name;
+    return base;
+  }
   function downloadOriginal(file, target) {
     fetch(api + "/v1/" + gameId + "/files/" + file.id, { headers: guestHeaders() })
       .then(function (response) { if (!response.ok) throw new Error("download"); return response.blob(); })
@@ -276,7 +321,7 @@
     var open = el("button", {
       type: "button",
       class: image ? "shot-open" : "btn shot-launch",
-      "aria-label": "Open " + file.name,
+      "aria-label": openLabel(file),
     }, image ? "Open photo" : "Open video");
     open.addEventListener("click", function () { showViewer(file.id, open); });
     var holder = el("div");
@@ -297,7 +342,7 @@
           video.src = url;
           return;
         }
-        open.replaceChildren(el("img", { src: url, alt: "" }));
+        open.replaceChildren(el("img", { src: url, alt: mediaAlt(file) }));
       })
       .catch(function () {
         var message = note("Preview failed. The original can still be downloaded.");
@@ -315,14 +360,14 @@
   }
   function renderFiles(data) {
     galleryFiles = data.files || [];
-    var name = el("input", {
+    var name = bindGuestName(el("input", {
       class: "input",
       maxLength: "40",
       autocomplete: "name",
       placeholder: "Your name",
       "aria-required": "true",
       "aria-describedby": "upload-name-error",
-    });
+    }));
     var nameError = el("p", { class: "field-error", id: "upload-name-error", role: "alert" });
     nameError.hidden = true;
     var picker = el("input", { class: "file-input", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
@@ -368,8 +413,10 @@
       form
     );
     if (batchHost) photos.append(batchHost);
-    photos.append(list, forgetButton());
+    photos.append(list);
+    guestOk = true;
     refreshManage();
+    syncSession();
   }
 
   var POST_LIMIT = 5000;
@@ -390,16 +437,44 @@
     return "This " + kind + " is " + value.length + " characters. The limit is " + limit + ", so it was not sent.";
   }
   function replyForm(post) {
-    var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name" });
+    var nameErrorId = "reply-name-" + post.id;
+    var name = bindGuestName(el("input", {
+      class: "input",
+      maxLength: "40",
+      autocomplete: "name",
+      placeholder: "Your name",
+      "aria-required": "true",
+      "aria-describedby": nameErrorId,
+    }));
+    var nameError = el("p", { class: "field-error", id: nameErrorId, role: "alert" });
+    nameError.hidden = true;
     var text = messageBox("Reply");
     var error = el("div");
     var button = el("button", { type: "submit", class: "btn" }, "Reply");
-    var form = el("form", { class: "stack" }, name, text, error, button);
+    var form = el("form", { class: "stack" },
+      el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name, nameError),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Reply"), text),
+      error,
+      button
+    );
     name.addEventListener("keydown", function (event) {
       if (event.key === "Enter") event.preventDefault();
     });
+    name.addEventListener("input", function () {
+      if (!name.value.trim()) return;
+      name.removeAttribute("aria-invalid");
+      nameError.hidden = true;
+      nameError.textContent = "";
+    });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      if (!name.value.trim()) {
+        name.setAttribute("aria-invalid", "true");
+        nameError.hidden = false;
+        nameError.textContent = "Name is required";
+        name.focus();
+        return;
+      }
       if (text.value.length > REPLY_LIMIT) {
         error.replaceChildren(el("p", { class: "form-error" }, tooLong("reply", text.value, REPLY_LIMIT)));
         return;
@@ -407,7 +482,7 @@
       fetch(api + "/v1/" + gameId + "/posts/" + post.id, {
         method: "POST",
         headers: guestHeaders({ "content-type": "application/json" }),
-        body: JSON.stringify({ name: name.value, text: text.value }),
+        body: JSON.stringify({ name: name.value.trim(), text: text.value }),
       }).then(function (response) { return response.json().then(function (payload) { return { ok: response.ok, payload: payload }; }); })
         .then(function (result) {
           if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not reply.")); return; }
@@ -421,12 +496,21 @@
 
   function renderPosts(data) {
     messagePosts = data.posts || [];
-    var name = el("input", { class: "input", maxLength: "40", placeholder: "Your name", autocomplete: "name" });
+    var name = bindGuestName(el("input", {
+      class: "input",
+      maxLength: "40",
+      placeholder: "Your name",
+      autocomplete: "name",
+      "aria-required": "true",
+      "aria-describedby": "message-name-error",
+    }));
+    var nameError = el("p", { class: "field-error", id: "message-name-error", role: "alert" });
+    nameError.hidden = true;
     var text = messageBox("Write a message");
     var error = el("div");
     var form = el("form", { class: "stack" },
       el("p", { class: "lead" }, "Messages and replies for this game. This is a board, not a live chat."),
-      el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name, nameError),
       el("label", { class: "field" }, el("span", { class: "label" }, "Message"), text),
       error,
       el("button", { type: "submit", class: "btn" }, "Send message")
@@ -434,8 +518,21 @@
     name.addEventListener("keydown", function (event) {
       if (event.key === "Enter") event.preventDefault();
     });
+    name.addEventListener("input", function () {
+      if (!name.value.trim()) return;
+      name.removeAttribute("aria-invalid");
+      nameError.hidden = true;
+      nameError.textContent = "";
+    });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      if (!name.value.trim()) {
+        name.setAttribute("aria-invalid", "true");
+        nameError.hidden = false;
+        nameError.textContent = "Name is required";
+        name.focus();
+        return;
+      }
       if (text.value.length > POST_LIMIT) {
         error.replaceChildren(el("p", { class: "form-error" }, tooLong("message", text.value, POST_LIMIT)));
         return;
@@ -443,7 +540,7 @@
       fetch(api + "/v1/" + gameId + "/posts", {
         method: "POST",
         headers: guestHeaders({ "content-type": "application/json" }),
-        body: JSON.stringify({ name: name.value, text: text.value }),
+        body: JSON.stringify({ name: name.value.trim(), text: text.value }),
       }).then(function (response) { return response.json().then(function (payload) { return { ok: response.ok, payload: payload }; }); })
         .then(function (result) {
           if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not send that message.")); return; }
@@ -473,7 +570,9 @@
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
     refresh.addEventListener("click", loadPosts);
     posts.replaceChildren(form, refresh, list);
+    guestOk = true;
     refreshManage();
+    syncSession();
   }
 
   var refreshManage = function () {};
@@ -489,6 +588,39 @@
         "Preview only. These photos and messages are samples, not the live tailgate. Choose Owner and type any word to open Manage. That word stays in this preview and is not a real owner key."
       ));
     }
+
+    var guestText = el("p", { id: "guest-chip-text" }, "");
+    var forget = el("button", { type: "button", class: "btn ghost", id: "forget-code" }, "Forget code on this device");
+    var guestChip = el("div", { class: "session-chip", id: "guest-chip" }, guestText, forget);
+    var signOut = el("button", { type: "button", class: "btn ghost", id: "owner-sign-out" }, "Sign out");
+    var ownerChip = el("div", { class: "session-chip", id: "owner-chip" }, el("p", { id: "owner-chip-text" }, "Signed in as owner"), signOut);
+    var sessionBar = el("div", { id: "session-bar", class: "session-bar", role: "region", "aria-label": "Sign-in" }, guestChip, ownerChip);
+    sessionBar.hidden = true;
+    guestChip.hidden = true;
+    ownerChip.hidden = true;
+    var main = document.querySelector("main");
+    if (main) main.insertBefore(sessionBar, main.firstChild);
+    forget.addEventListener("click", function () {
+      forgetPin();
+      gate("");
+    });
+    signOut.addEventListener("click", function () {
+      ownerMemory = "";
+      try { sessionStorage.removeItem(ownerKey); } catch (err) {}
+      var manage = document.getElementById("manage-dialog");
+      var key = document.getElementById("owner-key-dialog");
+      if (manage) closeDialog(manage);
+      if (key) closeDialog(key);
+      syncEntry();
+    });
+    syncSession = function () {
+      var showGuest = guestOk && !!pin;
+      var showOwner = !!ownerToken();
+      guestText.textContent = "Signed in as guest for " + gameLabel();
+      guestChip.hidden = !showGuest;
+      ownerChip.hidden = !showOwner;
+      sessionBar.hidden = !showGuest && !showOwner;
+    };
 
     var dialogReturn = new WeakMap();
     var dialogStack = [];
@@ -609,6 +741,8 @@
       title.textContent = file.name || "File";
       var bits = [file.uploadedBy, when(file.createdAt), file.bytes ? sizeLabel(file.bytes) : "", file.contentType || ""].filter(Boolean);
       byline.textContent = bits.length ? bits.join(" · ") : "No other details are stored for this file yet.";
+      var caption = viewer.querySelector(".viewer-caption");
+      if (caption) caption.textContent = mediaAlt(file);
       viewer.querySelectorAll(".viewer-prev").forEach(function (button) { button.disabled = viewerIndex === 0; });
       viewer.querySelectorAll(".viewer-next").forEach(function (button) { button.disabled = viewerIndex === viewerFiles.length - 1; });
       stage.replaceChildren(el("p", { class: "viewer-note" }, "Loading…"));
@@ -633,7 +767,7 @@
             video.src = url;
             return;
           }
-          stage.replaceChildren(el("img", { src: url, alt: file.name || "Photo" }));
+          stage.replaceChildren(el("img", { src: url, alt: mediaAlt(file) }));
         })
         .catch(function () {
           if (token !== paintToken) return;
@@ -657,7 +791,8 @@
       nextSide.setAttribute("aria-label", "Next photo");
       var title = el("h2", { id: "viewer-title" });
       var byline = el("p", { class: "byline" });
-      var panel = el("div", { class: "viewer-panel" }, title, byline, el("p", { class: "hint" }, "Captions and comments come later. This shows the file name and the details already stored with it."));
+      var caption = el("p", { class: "viewer-caption" });
+      var panel = el("div", { class: "viewer-panel" }, title, byline, caption, el("p", { class: "hint" }, "Captions and comments come later. This shows the file name and the details already stored with it."));
       function go(delta) { return function () { stepViewer(delta); }; }
       prev.addEventListener("click", go(-1));
       prevSide.addEventListener("click", go(-1));
@@ -988,6 +1123,7 @@
       entry.textContent = on ? "Manage" : "Owner";
       entry.setAttribute("aria-label", on ? "Manage this game" : "Enter the owner key");
       entry.setAttribute("aria-controls", on ? "manage-dialog" : "owner-key-dialog");
+      syncSession();
     }
     function openKeyDialog() {
       keyInput.value = "";
