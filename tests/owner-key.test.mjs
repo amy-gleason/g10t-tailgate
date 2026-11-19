@@ -68,6 +68,8 @@ async function openPage(browser, base, capture) {
   await page.goto(base, { waitUntil: "domcontentloaded" });
   await openSection(page, "photos");
   await page.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
+  const place = await page.$eval("#owner-entry", (node) => node.closest("header") ? "header" : (node.closest("footer") ? "footer" : "other"));
+  assert.equal(place, "footer");
   return page;
 }
 
@@ -83,6 +85,12 @@ test("owner key stays in memory and is sent without a re-render", async () => {
   try {
     const empty = await openPage(browser, base, capture);
     const before = capture.moves.length;
+    await empty.click("#game-switch");
+    await empty.waitForSelector("#game-sheet-owner");
+    await empty.click("#game-sheet-owner");
+    await empty.waitForSelector("#owner-key-dialog:not([hidden])");
+    await empty.click("#owner-key-close");
+    await empty.waitForSelector("#owner-key-dialog", { hidden: true });
     await empty.click("#owner-entry");
     await empty.waitForSelector("#owner-key-dialog:not([hidden])");
     const manageHidden = await empty.$eval("#manage-dialog", (node) => node.hidden).catch(() => true);

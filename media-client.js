@@ -624,8 +624,11 @@
 
   function setupChrome() {
     var entry = el("button", { type: "button", id: "owner-entry", class: "owner-entry", "aria-haspopup": "dialog" }, "Owner");
-    var header = document.querySelector("header");
-    if (header) header.append(entry);
+    var foot = el("footer", { class: "site-foot" }, el("p", null, "Hosting this tailgate?"));
+    var main = document.querySelector("main");
+    if (main) main.append(foot);
+    else document.body.append(foot);
+    foot.append(entry);
     if (preview && !document.querySelector(".preview-banner")) {
       document.body.prepend(el(
         "p",
