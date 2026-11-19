@@ -118,7 +118,31 @@ a { color: inherit; }
 .job-mark { font-size: 1.35rem; line-height: 1; }
 .job-tab { min-height: 60px; min-width: 44px; padding: 6px 2px; border: 0; border-top: 4px solid transparent; background: #fff; font-weight: 800; font-size: 0.8rem; line-height: 1.1; cursor: pointer; }
 .job-tab[aria-selected="true"] { border-top-color: #ff8200; }
-.job-tab:focus-visible, .job-card:focus-visible { outline: 3px solid #171717; outline-offset: 2px; }
+.job-tab:focus-visible, .job-card:focus-visible, .game-switch:focus-visible, .game-sheet :focus-visible { outline: 3px solid #171717; outline-offset: 2px; }
+.game-switch { display: inline-flex; align-items: center; min-height: 48px; margin: 8px 0 0; padding: 0 16px; border: 2px solid #171717; border-radius: 999px; background: #fff; color: #171717; font-family: inherit; font-weight: 800; font-size: 1rem; cursor: pointer; }
+.game-sheet { position: fixed; inset: 0; z-index: 55; display: flex; align-items: flex-end; justify-content: center; background: rgba(23, 23, 23, .55); }
+.game-sheet-panel { width: min(100%, 36rem); max-height: calc(100vh - 24px); overflow: auto; padding: 16px 16px 28px; border-radius: 20px 20px 0 0; background: #fff; color: #171717; }
+.game-sheet-bar { display: flex; align-items: center; gap: 12px; }
+.game-sheet-bar h2 { margin: 0; font-size: 1.5rem; }
+.game-sheet-bar .btn { width: auto; min-height: 48px; margin: 0 0 0 auto; }
+.game-kicker { margin: 16px 0 0; font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #58595B; }
+.game-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.game-list a { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; min-height: 76px; margin-top: 10px; padding: 10px 12px; border: 2px solid #d4d4d4; border-radius: 16px; color: #171717; text-decoration: none; }
+.game-list a[aria-current="page"] { border-color: #171717; background: #fff4e8; }
+.game-date { width: 56px; height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; background: #171717; color: #fff; font-weight: 800; line-height: 1; }
+.game-list .up .game-date, .game-list a[aria-current="page"] .game-date { background: #ff8200; color: #171717; }
+.game-date span { font-size: .7rem; letter-spacing: .06em; }
+.game-date b { font-size: 1.35rem; }
+.game-sub { display: block; margin-top: 2px; color: #58595B; font-size: .95rem; font-weight: 650; }
+.archive-banner { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: #171717; color: #fff; font-weight: 800; }
+.archive-banner a { color: #fff; text-decoration: underline; }
+.past-photos-title { margin: 8px 0; font-size: 1.35rem; }
+body.past-game.phone-jobs[data-job="game"] .acc[data-section="photos"] { display: block; }
+body.past-game.phone-jobs[data-job="game"] .acc[data-section="photos"] .acc-panel { display: block !important; }
+@media (min-width: 900px) {
+  .game-sheet { align-items: center; }
+  .game-sheet-panel { border-radius: 20px; }
+}
 @media (max-width: 899px) {
   body.phone-jobs { padding-bottom: 84px; }
   body.phone-jobs .job-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
