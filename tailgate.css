@@ -104,7 +104,50 @@ section { margin-top: 32px; }
 .center { text-align: center; }
 .name { font-weight: 700; font-size: 1.125rem; }
 a { color: inherit; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .job-tab, .job-card { transition: none; }
+}
+
+.job-cards, .job-tabs { display: none; }
+.job-card, .job-tab { font-family: inherit; color: #171717; }
+.job-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 112px; padding: 14px; border: 2px solid #171717; border-radius: 16px; background: #fff; text-align: left; cursor: pointer; }
+.job-card b { font-size: 1.05rem; font-weight: 800; line-height: 1.2; }
+.job-card span { font-size: 0.95rem; font-weight: 650; }
+.job-card.hot { background: #ff8200; }
+.job-mark { font-size: 1.35rem; line-height: 1; }
+.job-tab { min-height: 60px; min-width: 44px; padding: 6px 2px; border: 0; border-top: 4px solid transparent; background: #fff; font-weight: 800; font-size: 0.8rem; line-height: 1.1; cursor: pointer; }
+.job-tab[aria-selected="true"] { border-top-color: #ff8200; }
+.job-tab:focus-visible, .job-card:focus-visible { outline: 3px solid #171717; outline-offset: 2px; }
+@media (max-width: 899px) {
+  body.phone-jobs { padding-bottom: 84px; }
+  body.phone-jobs .job-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  body.phone-jobs[data-job="rsvp"] .job-cards,
+  body.phone-jobs[data-job="bring"] .job-cards,
+  body.phone-jobs[data-job="photos"] .job-cards,
+  body.phone-jobs[data-job="messages"] .job-cards { display: none; }
+  body.phone-jobs .job-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); background: #fff; border-top: 1px solid #d4d4d4; padding-bottom: env(safe-area-inset-bottom); }
+  body.phone-jobs .accordion .acc { display: none; }
+  body.phone-jobs[data-job="rsvp"] .acc[data-section="coming"],
+  body.phone-jobs[data-job="bring"] .acc[data-section="food"],
+  body.phone-jobs[data-job="bring"] .acc[data-section="other"],
+  body.phone-jobs[data-job="bring"] .acc[data-section="drinks"],
+  body.phone-jobs[data-job="bring"] .acc[data-section="donations"],
+  body.phone-jobs[data-job="photos"] .acc[data-section="photos"],
+  body.phone-jobs[data-job="messages"] .acc[data-section="posts"] { display: block; }
+  body.phone-jobs .acc-toggle,
+  body.phone-jobs .acc-foot { display: none !important; }
+  body.phone-jobs[data-job="rsvp"] .acc[data-section="coming"] .acc-panel,
+  body.phone-jobs[data-job="bring"] .acc[data-section="food"] .acc-panel,
+  body.phone-jobs[data-job="bring"] .acc[data-section="other"] .acc-panel,
+  body.phone-jobs[data-job="bring"] .acc[data-section="drinks"] .acc-panel,
+  body.phone-jobs[data-job="bring"] .acc[data-section="donations"] .acc-panel,
+  body.phone-jobs[data-job="photos"] .acc[data-section="photos"] .acc-panel,
+  body.phone-jobs[data-job="messages"] .acc[data-section="posts"] .acc-panel { display: block !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-tab, .job-card, html { scroll-behavior: auto; transition: none; }
+}
 
 /* R1: viewer, one Manage panel, owner key. Orange is a fill or a thick mark beside ink text.
    Text on #ff8200 stays #171717. Orange text on white uses #A04D00. */
