@@ -40,36 +40,24 @@
     return;
   }
 
-  var pinKey = "tailgate-media-pin-" + gameId + (preview ? "-preview" : "");
   var ownerKey = "tailgate-owner-key-" + gameId + (preview ? "-preview" : "");
   var ownerMemory = "";
-  var pin = "";
-  var pinRound = 0;
-  function readStored(storage, key) {
-    try { return storage.getItem(key) || ""; } catch (error) { return ""; }
+  var loadRound = 0;
+  function clearStoredGuestCodes() {
+    try {
+      var drop = [];
+      for (var i = 0; i < localStorage.length; i += 1) {
+        var key = localStorage.key(i) || "";
+        if (key.indexOf("tailgate-media-pin-") === 0) drop.push(key);
+      }
+      drop.forEach(function (key) {
+        try { localStorage.removeItem(key); } catch (err) {}
+      });
+    } catch (err) {}
   }
-  function savePin(value) {
-    pin = value;
-    try { localStorage.setItem(pinKey, value); } catch (err) {
-      try { localStorage.removeItem(pinKey); } catch (ignore) {}
-      try { sessionStorage.setItem(pinKey, value); } catch (err2) {}
-    }
-  }
-  function forgetPin() {
-    pin = "";
-    try { localStorage.removeItem(pinKey); } catch (err) {}
-    try { sessionStorage.removeItem(pinKey); } catch (err) {}
-  }
-  pin = readStored(localStorage, pinKey);
-  if (!pin) {
-    pin = readStored(sessionStorage, pinKey);
-    if (pin) savePin(pin);
-  }
+  clearStoredGuestCodes();
   try { ownerMemory = sessionStorage.getItem(ownerKey) || ""; } catch (error) { ownerMemory = ""; }
-  // Placeholder for the sample preview only. It is not a guest code and is sent only to the preview stub.
-  if (preview && !pin) pin = "preview";
   var guestNameKey = "vols-tailgate-name";
-  var guestOk = false;
   var syncSession = function () {};
   function readGuestName() {
     try { return String(localStorage.getItem(guestNameKey) || "").slice(0, 40); } catch (error) { return ""; }
@@ -97,7 +85,7 @@
   }
 
   function guestHeaders(extra) {
-    var headers = { "x-guest-pin": pin };
+    var headers = {};
     Object.keys(extra || {}).forEach(function (key) { headers[key] = extra[key]; });
     return headers;
   }
@@ -126,29 +114,6 @@
       jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp",
       heic: "image/heic", heif: "image/heif", mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
     }[ext] || "application/octet-stream";
-  }
-
-  function gate(errorText) {
-    if (errorText) forgetPin();
-    guestOk = false;
-    pinRound += 1;
-    var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Guest code" });
-    var error = el("div");
-    if (errorText) error.append(el("p", { class: "form-error", role: "alert" }, errorText));
-    var form = el("form", { class: "stack" },
-      el("p", { class: "lead" }, "Enter the guest code to see photos, videos, and messages for this game."),
-      el("label", { class: "field" }, el("span", { class: "label" }, "Guest code"), input),
-      error,
-      el("button", { type: "submit", class: "btn" }, "Continue")
-    );
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
-      savePin(input.value.trim());
-      loadAll();
-    });
-    photos.replaceChildren(form);
-    posts.replaceChildren(note("Enter the guest code under Photos & videos to open messages."));
-    syncSession();
   }
 
   var batchHost = null;
@@ -191,7 +156,6 @@
         xhr.setRequestHeader("content-type", typeFor(item.file));
         xhr.setRequestHeader("x-file-name", item.file.name);
         xhr.setRequestHeader("x-guest-name", name);
-        xhr.setRequestHeader("x-guest-pin", pin);
         xhr.setRequestHeader("x-batch-id", batchId);
         xhr.setRequestHeader("x-batch-size", String(batchSize));
         xhr.upload.onprogress = function (event) {
@@ -497,7 +461,6 @@
     );
     if (batchHost) photos.append(batchHost);
     photos.append(list);
-    guestOk = true;
     refreshManage();
     syncSession();
   }
@@ -653,7 +616,6 @@
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
     refresh.addEventListener("click", loadPosts);
     posts.replaceChildren(form, refresh, list);
-    guestOk = true;
     refreshManage();
     syncSession();
   }
@@ -672,21 +634,13 @@
       ));
     }
 
-    var guestText = el("p", { id: "guest-chip-text" }, "");
-    var forget = el("button", { type: "button", class: "btn ghost", id: "forget-code" }, "Forget code on this device");
-    var guestChip = el("div", { class: "session-chip", id: "guest-chip" }, guestText, forget);
     var signOut = el("button", { type: "button", class: "btn ghost", id: "owner-sign-out" }, "Sign out");
     var ownerChip = el("div", { class: "session-chip", id: "owner-chip" }, el("p", { id: "owner-chip-text" }, "Signed in as owner"), signOut);
-    var sessionBar = el("div", { id: "session-bar", class: "session-bar", role: "region", "aria-label": "Sign-in" }, guestChip, ownerChip);
+    var sessionBar = el("div", { id: "session-bar", class: "session-bar", role: "region", "aria-label": "Sign-in" }, ownerChip);
     sessionBar.hidden = true;
-    guestChip.hidden = true;
     ownerChip.hidden = true;
     var main = document.querySelector("main");
     if (main) main.insertBefore(sessionBar, main.firstChild);
-    forget.addEventListener("click", function () {
-      forgetPin();
-      gate("");
-    });
     signOut.addEventListener("click", function () {
       ownerMemory = "";
       try { sessionStorage.removeItem(ownerKey); } catch (err) {}
@@ -697,12 +651,9 @@
       syncEntry();
     });
     syncSession = function () {
-      var showGuest = guestOk && !!pin;
       var showOwner = !!ownerToken();
-      guestText.textContent = "Signed in as guest for " + gameLabel();
-      guestChip.hidden = !showGuest;
       ownerChip.hidden = !showOwner;
-      sessionBar.hidden = !showGuest && !showOwner;
+      sessionBar.hidden = !showOwner;
     };
 
     var dialogReturn = new WeakMap();
@@ -1072,10 +1023,6 @@
           group("Sharing", [el("p", { class: "hint" }, "Uploads and messages follow the site switches. This panel can't turn them off, and it can't change storage limits.")])
         ),
         el("div", null,
-          group("Guest code", [
-            el("p", { class: "secret-code", "aria-label": "Guest code hidden" }, "••••"),
-            el("p", { class: "hint" }, "The guest code is never shown here. Changing it is not part of this update."),
-          ]),
           group("This phone", [
             el("p", { class: "hint", id: "manage-owner-status", role: "status" }, "Owner key saved on this phone"),
             replaceKey,
@@ -1180,7 +1127,7 @@
     });
     var keyStatus = el("p", { class: "hint", id: "owner-key-status", role: "status" });
     var keyForm = el("form", { class: "stack" },
-      el("p", { class: "hint" }, "The owner key removes files or messages. A guest code cannot do that."),
+      el("p", { class: "hint" }, "The owner key removes files or messages. Guests cannot do that."),
       el("label", { class: "field" }, el("span", { class: "label" }, "Owner key"), keyInput),
       keyStatus,
       el("button", { type: "submit", class: "btn" }, "Save owner key on this phone")
@@ -1326,40 +1273,37 @@
   }
 
   function loadFiles() {
-    var round = pinRound;
+    var round = loadRound;
     return fetch(api + "/v1/" + gameId + "/files", { headers: guestHeaders() }).then(function (response) {
       return response.json().then(function (payload) { return { status: response.status, payload: payload }; });
     }).then(function (result) {
-      if (round !== pinRound) return;
-      if (result.status === 401) { gate("That guest code was not accepted."); return; }
+      if (round !== loadRound) return;
       if (result.status === 503) { photos.replaceChildren(note("Photos and videos aren't available yet. Sharing stays off until storage is turned on.")); return; }
       if (result.status !== 200) { photos.replaceChildren(note(result.payload.error || "Could not load photos.")); return; }
       renderFiles(result.payload);
     }).catch(function () {
-      if (round !== pinRound) return;
+      if (round !== loadRound) return;
       photos.replaceChildren(note("Photos and videos aren't available yet."));
     });
   }
   function loadPosts() {
-    var round = pinRound;
+    var round = loadRound;
     return fetch(api + "/v1/" + gameId + "/posts", { headers: guestHeaders() }).then(function (response) {
       return response.json().then(function (payload) { return { status: response.status, payload: payload }; });
     }).then(function (result) {
-      if (round !== pinRound) return;
-      if (result.status === 401) { gate("That guest code was not accepted."); return; }
+      if (round !== loadRound) return;
       if (result.status === 503) { posts.replaceChildren(note("Messages aren't available yet. The board stays off until storage is turned on.")); return; }
       if (result.status !== 200) { posts.replaceChildren(note(result.payload.error || "Could not load messages.")); return; }
       renderPosts(result.payload);
     }).catch(function () {
-      if (round !== pinRound) return;
+      if (round !== loadRound) return;
       posts.replaceChildren(note("Messages aren't available yet."));
     });
   }
   function loadAll() {
-    pinRound += 1;
+    loadRound += 1;
     return Promise.all([loadFiles(), loadPosts()]);
   }
   setupChrome();
-  if (!pin) gate("");
-  else loadAll();
+  loadAll();
 })();
