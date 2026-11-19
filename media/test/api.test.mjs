@@ -197,7 +197,8 @@ test("guest pin, type, size, isolation, preview, and owner delete", async () => 
 
 async function runFiles(mf) {
   const denied = await call(mf, "/v1/lsu/files", { headers: { "x-guest-pin": "pin-kentucky" } });
-  assert.equal(denied.status, 401);
+  assert.equal(denied.status, 200);
+  assert.deepEqual(denied.payload.files, []);
   const unknown = await call(mf, "/v1/alabama/files", { headers: { "x-guest-pin": "pin-lsu" } });
   assert.equal(unknown.status, 404);
 
@@ -383,11 +384,12 @@ test("health and cors do not leak secrets or allow other sites", async () => {
     const blocked = await call(mf, "/health", { headers: { origin: "https://evil.example" } });
     assert.equal(blocked.headers.get("access-control-allow-origin"), null);
     const missing = await call(mf, "/v1/lsu/files");
-    assert.equal(missing.status, 401);
+    assert.equal(missing.status, 200);
+    assert.deepEqual(missing.payload.files, []);
   } finally { await mf.dispose(); }
 });
 
-test("kill switch and missing pin fail closed", async () => {
+test("kill switch stays closed and a missing guest pin does not block reads", async () => {
   const off = worker({ UPLOADS_ENABLED: "false", POSTS_ENABLED: "false" });
   try {
   const upload = await call(off, "/v1/lsu/files", {
@@ -401,7 +403,8 @@ test("kill switch and missing pin fail closed", async () => {
   } finally { await off.dispose(); }
   const unset = worker({ GUEST_PIN_LSU: "" });
   try {
-    const closed = await call(unset, "/v1/lsu/files", { headers: { "x-guest-pin": "pin-lsu" } });
-    assert.equal(closed.status, 503);
+    const closed = await call(unset, "/v1/lsu/files");
+    assert.equal(closed.status, 200);
+    assert.deepEqual(closed.payload.files, []);
   } finally { await unset.dispose(); }
 });

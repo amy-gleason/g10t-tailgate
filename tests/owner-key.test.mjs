@@ -66,9 +66,6 @@ async function openPage(browser, base, capture) {
   });
   await page.goto(base, { waitUntil: "domcontentloaded" });
   await page.click('[data-section="photos"] .acc-toggle');
-  await page.waitForSelector("#photos-body input");
-  await page.type("#photos-body input", "local-only");
-  await page.click("#photos-body button");
   await page.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
   return page;
 }
