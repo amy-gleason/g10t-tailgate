@@ -1609,6 +1609,29 @@
     if (game.kickoff) main.append(i("p", { class: "kickoff" }, "Kickoff: " + game.kickoff));
     if (game.schedule) main.append(i("p", { class: "lead" }, game.schedule));
     main.append(i("h1", null, game.heading));
+    if (game.weather && /^https:\/\/(?:forecast|www)\.weather\.gov\//.test(game.weather.sourceUrl)) {
+      var weatherBody = i("div", { id: "weather-body" });
+      weatherBody.append(
+        i("p", null, "Checking the National Weather Service forecast for " + game.weather.place + "…"),
+      );
+      var weatherSource = i("p", { class: "weather-source" });
+      weatherSource.append(
+        i(
+          "a",
+          { href: game.weather.sourceUrl, rel: "noopener noreferrer" },
+          game.weather.sourceName + " forecast for " + game.weather.place,
+        ),
+      );
+      main.append(
+        i(
+          "div",
+          { class: "weather", id: "weather" },
+          i("p", { class: "kicker" }, "Weather"),
+          weatherBody,
+          weatherSource,
+        ),
+      );
+    }
     if (game.locationPlacement === "top") {
       var top = i("div", { class: "location-top", id: "location" });
       top.append(i("p", { class: "kicker" }, "Location"));
