@@ -218,6 +218,15 @@
     document.body.style.overflow = "hidden";
     closeGames.focus();
   }
+  if (document.getElementById("owner-entry")) {
+    var ownerJump = el("button", { type: "button", class: "btn ghost", id: "game-sheet-owner" }, "Owner sign-in");
+    ownerJump.addEventListener("click", function () {
+      closeSheet();
+      var owner = document.getElementById("owner-entry");
+      if (owner) owner.click();
+    });
+    sheet.querySelector(".game-sheet-panel").append(el("p", { class: "game-kicker" }, "Hosting?"), ownerJump);
+  }
   opener.addEventListener("click", openSheet);
   closeGames.addEventListener("click", closeSheet);
   sheet.addEventListener("click", function (event) { if (event.target === sheet) closeSheet(); });
