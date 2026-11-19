@@ -4,6 +4,7 @@ import { readFile, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { openSection } from "./open-section.mjs";
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("/tmp/pw/node_modules/puppeteer-core");
@@ -153,7 +154,7 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     const comingAxe = await axe(page);
     assert.deepEqual(comingAxe, [], JSON.stringify(comingAxe));
 
-    await page.click('[data-section="posts"] .acc-toggle');
+    await openSection(page, "posts");
     await page.waitForSelector("#posts-body .post label .label");
     assert.equal(await page.$eval("#posts-body .post label .label", (node) => node.textContent), "Your name");
     const postsAxe = await axe(page);
@@ -162,7 +163,7 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     await page.click("#posts-body form button[type=submit]");
     assert.equal(await page.$eval("#message-name-error", (node) => node.textContent), "Name is required");
 
-    await page.click('[data-section="coming"] .acc-toggle');
+    await openSection(page, "coming");
     await setName(page, "#coming [data-guest-name]", "Riley");
     const shared = await page.evaluate(() => ({
       photo: document.querySelector("#photos-body [data-guest-name]").value,
@@ -187,7 +188,7 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     assert.equal(fromPhoto.reply, "Jordan");
     assert.equal(fromPhoto.stored, "Jordan");
 
-    await page.click('[data-section="photos"] .acc-toggle');
+    await openSection(page, "photos");
     await page.evaluate(() => document.getElementById("acc-photos").scrollIntoView({ block: "start" }));
     await page.waitForSelector(".shot-open img");
     assert.equal(await page.$eval(".shot-open img", (node) => node.alt), "Photo from Sample guest");
@@ -207,13 +208,13 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     await page.waitForSelector("#viewer[hidden]");
 
     await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
-    await page.click('[data-section="coming"] .acc-toggle');
+    await openSection(page, "coming");
     const wideComing = await axe(page);
     assert.deepEqual(wideComing, [], JSON.stringify(wideComing));
-    await page.click('[data-section="photos"] .acc-toggle');
+    await openSection(page, "photos");
     const widePhotos = await axe(page);
     assert.deepEqual(widePhotos, [], JSON.stringify(widePhotos));
-    await page.click('[data-section="posts"] .acc-toggle');
+    await openSection(page, "posts");
     const widePosts = await axe(page);
     assert.deepEqual(widePosts, [], JSON.stringify(widePosts));
     const wideInput = await page.$eval("#coming .input", (node) => Number.parseFloat(getComputedStyle(node).fontSize));

@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { openSection } from "./open-section.mjs";
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("/tmp/pw/node_modules/puppeteer-core");
@@ -126,14 +127,14 @@ test("a game page loads photos and messages with no guest code", { timeout: 9000
       const photos = document.getElementById("photos-body");
       return photos && photos.textContent.includes("Photos and videos for this game");
     });
-    await page.click('[data-section="photos"] .acc-toggle');
+    await openSection(page, "photos");
     await page.waitForSelector("#photos-body .file-input");
     const photos = await page.$eval("#photos-body", (node) => node.innerText);
     assert.equal(photos.includes("Enter the guest code"), false);
     assert.equal(photos.includes("Forget code"), false);
     assert.equal(photos.includes("Guest code"), false);
     assert.equal(await page.$("#photos-body input[placeholder='Guest code']"), null);
-    await page.click('[data-section="posts"] .acc-toggle');
+    await openSection(page, "posts");
     await page.waitForFunction(() => document.body.innerText.includes("Send message"));
     const stored = await page.evaluate(() => ({
       lsu: localStorage.getItem("tailgate-media-pin-lsu"),
@@ -153,7 +154,7 @@ test("a game page loads photos and messages with no guest code", { timeout: 9000
     const narrow = await axe(page);
     assert.deepEqual(narrow, [], JSON.stringify(narrow));
     await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
-    await page.click('[data-section="photos"] .acc-toggle');
+    await openSection(page, "photos");
     const wide = await axe(page);
     assert.deepEqual(wide, [], JSON.stringify(wide));
 
@@ -174,7 +175,7 @@ test("a game page loads photos and messages with no guest code", { timeout: 9000
     const previewAxe = await axe(preview);
     assert.deepEqual(previewAxe, [], JSON.stringify(previewAxe));
     await preview.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
-    await preview.click('[data-section="photos"] .acc-toggle');
+    await openSection(preview, "photos");
     await preview.waitForSelector("#photos-body .shot-open, #photos-body .file-tile");
     const previewWide = await axe(preview);
     assert.deepEqual(previewWide, [], JSON.stringify(previewWide));

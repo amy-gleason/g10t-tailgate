@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { openSection } from "./open-section.mjs";
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("/tmp/pw/node_modules/puppeteer-core");
@@ -65,7 +66,7 @@ async function openPage(browser, base, capture) {
     request.continue();
   });
   await page.goto(base, { waitUntil: "domcontentloaded" });
-  await page.click('[data-section="photos"] .acc-toggle');
+  await openSection(page, "photos");
   await page.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
   return page;
 }

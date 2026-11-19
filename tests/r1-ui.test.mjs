@@ -4,6 +4,7 @@ import { readFile, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { openSection } from "./open-section.mjs";
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("/tmp/pw/node_modules/puppeteer-core");
@@ -64,7 +65,7 @@ test("viewer, manage, and delete confirmation stay on the preview stub", async (
       if (url.includes("workers.dev") || url.includes("telegra.ph")) blocked.push(url);
     });
     await page.goto(base, { waitUntil: "domcontentloaded" });
-    await page.click('[data-section="photos"] .acc-toggle');
+    await openSection(page, "photos");
     await page.waitForFunction(() => document.getElementById("photos-body").innerText.includes("tent-setup.png"));
     assert.equal(blocked.length, 0);
     assert.equal(await page.$("#photos-body details"), null);
