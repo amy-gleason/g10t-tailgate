@@ -188,6 +188,7 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     assert.equal(fromPhoto.stored, "Jordan");
 
     await page.click('[data-section="photos"] .acc-toggle');
+    await page.evaluate(() => document.getElementById("acc-photos").scrollIntoView({ block: "start" }));
     await page.waitForSelector(".shot-open img");
     assert.equal(await page.$eval(".shot-open img", (node) => node.alt), "Photo from Sample guest");
     const photosAxe = await axe(page);
