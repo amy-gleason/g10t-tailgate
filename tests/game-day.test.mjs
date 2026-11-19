@@ -49,8 +49,8 @@ test("font rules inherit a real family and inputs stay at least 16px", () => {
   assert.match(css, /\.total-n\s*\{[^}]*#A04D00/);
   const client = readFileSync(join(root, "media-client.js"), "utf8");
   assert.match(client, /vols-tailgate-name/);
-  assert.match(client, /Signed in as guest for /);
-  assert.match(client, /Forget code on this device/);
+  assert.doesNotMatch(client, /Signed in as guest for /);
+  assert.doesNotMatch(client, /Forget code on this device/);
   assert.match(client, /Signed in as owner/);
   assert.match(client, /id: "owner-sign-out"/);
   assert.match(client, /Photo" \+ who|kind \+ " from "/);
@@ -118,19 +118,9 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
     await page.goto(base, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("#coming [data-guest-name]");
-    await page.waitForSelector("#guest-chip-text");
     await page.waitForSelector("#photos-body [data-guest-name]");
-
-    const photosClosed = await page.$eval("#acc-photos", (node) => node.classList.contains("open"));
-    assert.equal(photosClosed, false);
-    assert.equal(await page.$eval("#guest-chip-text", (node) => node.textContent), "Signed in as guest for LSU");
-    assert.equal(await page.$eval("#guest-chip", (node) => node.hidden), false);
-    const forgetBox = await page.$eval("#forget-code", (node) => {
-      const rect = node.getBoundingClientRect();
-      return { text: node.textContent, width: rect.width, height: rect.height };
-    });
-    assert.equal(forgetBox.text, "Forget code on this device");
-    assert.ok(forgetBox.width >= 44 && forgetBox.height >= 44, JSON.stringify(forgetBox));
+    assert.equal(await page.$("#guest-chip"), null);
+    assert.equal(await page.$("#forget-code"), null);
 
     const metrics = await page.evaluate(() => {
       const body = getComputedStyle(document.body).fontFamily;
@@ -255,24 +245,10 @@ test("game-day polish keeps names, the sign-in chip, contrast, and alt text", { 
     await page.waitForSelector("#owner-chip[hidden]");
     const afterOut = await page.evaluate(() => ({
       session: sessionStorage.getItem("tailgate-owner-key-lsu-preview"),
-      guest: document.getElementById("guest-chip-text").textContent,
+      name: localStorage.getItem("vols-tailgate-name"),
     }));
     assert.equal(afterOut.session, null);
-    assert.equal(afterOut.guest, "Signed in as guest for LSU");
-
-    if (!(await page.$eval("#acc-photos", (node) => node.classList.contains("open")))) {
-      await page.click('[data-section="photos"] .acc-toggle');
-    }
-    await page.click("#forget-code");
-    await page.waitForSelector('#photos-body input[placeholder="Guest code"]');
-    const forgotten = await page.evaluate(() => ({
-      guestHidden: document.getElementById("guest-chip").hidden,
-      name: localStorage.getItem("vols-tailgate-name"),
-      pin: localStorage.getItem("tailgate-media-pin-lsu-preview"),
-    }));
-    assert.equal(forgotten.guestHidden, true);
-    assert.equal(forgotten.name, "Jordan");
-    assert.equal(forgotten.pin, null);
+    assert.equal(afterOut.name, "Jordan");
     assert.deepEqual(leaks, []);
   } finally {
     await browser.close();

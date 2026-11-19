@@ -42,7 +42,8 @@ test("guest storage stays separate from the owner key", () => {
   assert.match(client, /sessionStorage\.setItem\(ownerKey/);
   assert.doesNotMatch(client, /localStorage\.setItem\(ownerKey/);
   assert.doesNotMatch(client, /localStorage\.setItem\(\s*["']tailgate-owner/);
-  assert.match(client, /Forget code on this device/);
+  assert.doesNotMatch(client, /Forget code on this device/);
+  assert.doesNotMatch(client, /Signed in as guest/);
   assert.match(client, /class: "btn ghost"/);
   assert.doesNotMatch(client, /local-test-pin/);
   assert.doesNotMatch(client, /workers\.dev/);
@@ -200,22 +201,15 @@ test("remembered guest code is per game, forgettable, and dropped when rejected"
 
     await page.type('#photos-body input[placeholder="Guest code"]', GUEST_LSU);
     await page.click('#photos-body button[type="submit"]');
-    await page.waitForFunction(() => document.body.innerText.includes("Forget code on this device"));
+    await page.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
     const remembered = await storageOf(page);
     assert.equal(remembered.local[LSU_KEY], GUEST_LSU);
     assert.equal(remembered.local[KY_KEY], undefined);
     assert.equal(remembered.session[OWNER_KEY], undefined);
     assertOwnerStaysOutOfLocal(remembered);
     assert.deepEqual(state.ownerTokens, ["", ""]);
-    const target = await page.evaluate(() => {
-      const button = [...document.querySelectorAll("button")].find((node) => node.textContent === "Forget code on this device");
-      const rect = button.getBoundingClientRect();
-      return { type: button.type, text: button.textContent, width: rect.width, height: rect.height };
-    });
-    assert.equal(target.type, "button");
-    assert.equal(target.text, "Forget code on this device");
-    assert.ok(target.width >= 44, "forget width " + target.width);
-    assert.ok(target.height >= 44, "forget height " + target.height);
+    assert.equal(await page.$("#forget-code"), null);
+    assert.equal(await page.$("#guest-chip"), null);
     await shot(page, "guest-code-remembered.png");
 
     await page.evaluate(() => {
@@ -243,9 +237,11 @@ test("remembered guest code is per game, forgettable, and dropped when rejected"
     const ownerVisible = await page.evaluate((owner) => document.body.innerText.includes(owner), OWNER);
     assert.equal(ownerVisible, false);
 
-    await page.evaluate(() => {
-      [...document.querySelectorAll("button")].find((node) => node.textContent === "Forget code on this device").click();
-    });
+    await page.evaluate((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }, LSU_KEY);
+    await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector('#photos-body input[placeholder="Guest code"]');
     const forgotten = await storageOf(page);
     assert.equal(forgotten.local[LSU_KEY], undefined);
@@ -317,9 +313,9 @@ test("remembered guest code is per game, forgettable, and dropped when rejected"
     state.mode = "ok";
     await stale.type('#photos-body input[placeholder="Guest code"]', GUEST_NEXT);
     await stale.click('#photos-body button[type="submit"]');
-    await stale.waitForFunction(() => document.body.innerText.includes("Forget code on this device"));
+    await stale.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    const stillThere = await stale.evaluate(() => document.body.innerText.includes("Forget code on this device"));
+    const stillThere = await stale.evaluate(() => document.body.innerText.includes("Photos and videos for this game"));
     const afterStale = await storageOf(stale);
     assert.equal(stillThere, true);
     assert.equal(afterStale.local[LSU_KEY], GUEST_NEXT);
@@ -330,7 +326,7 @@ test("remembered guest code is per game, forgettable, and dropped when rejected"
     const pickup = await newPage(pickupContext, state);
     await pickup.evaluateOnNewDocument((key, value) => sessionStorage.setItem(key, value), LSU_KEY, GUEST_SESSION);
     await pickup.goto(base + "#photos", { waitUntil: "domcontentloaded" });
-    await pickup.waitForFunction(() => document.body.innerText.includes("Forget code on this device"));
+    await pickup.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
     const picked = await storageOf(pickup);
     assert.equal(picked.local[LSU_KEY], GUEST_SESSION);
     assert.equal(picked.session[LSU_KEY], GUEST_SESSION);
@@ -361,7 +357,7 @@ test("remembered guest code is per game, forgettable, and dropped when rejected"
       sessionStorage.setItem(key, value);
     }, LSU_KEY, GUEST_SESSION);
     await blocked.goto(base + "#photos", { waitUntil: "domcontentloaded" });
-    await blocked.waitForFunction(() => document.body.innerText.includes("Forget code on this device"));
+    await blocked.waitForFunction(() => document.body.innerText.includes("Photos and videos for this game"));
     const localBlocked = await blocked.evaluate(() => {
       try { localStorage.setItem("probe", "1"); return false; } catch (error) { return true; }
     });

@@ -69,7 +69,6 @@
   // Placeholder for the sample preview only. It is not a guest code and is sent only to the preview stub.
   if (preview && !pin) pin = "preview";
   var guestNameKey = "vols-tailgate-name";
-  var guestOk = false;
   var syncSession = function () {};
   function readGuestName() {
     try { return String(localStorage.getItem(guestNameKey) || "").slice(0, 40); } catch (error) { return ""; }
@@ -130,7 +129,6 @@
 
   function gate(errorText) {
     if (errorText) forgetPin();
-    guestOk = false;
     pinRound += 1;
     var input = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: "Guest code" });
     var error = el("div");
@@ -414,7 +412,6 @@
     );
     if (batchHost) photos.append(batchHost);
     photos.append(list);
-    guestOk = true;
     refreshManage();
     syncSession();
   }
@@ -570,7 +567,6 @@
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
     refresh.addEventListener("click", loadPosts);
     posts.replaceChildren(form, refresh, list);
-    guestOk = true;
     refreshManage();
     syncSession();
   }
@@ -589,21 +585,13 @@
       ));
     }
 
-    var guestText = el("p", { id: "guest-chip-text" }, "");
-    var forget = el("button", { type: "button", class: "btn ghost", id: "forget-code" }, "Forget code on this device");
-    var guestChip = el("div", { class: "session-chip", id: "guest-chip" }, guestText, forget);
     var signOut = el("button", { type: "button", class: "btn ghost", id: "owner-sign-out" }, "Sign out");
     var ownerChip = el("div", { class: "session-chip", id: "owner-chip" }, el("p", { id: "owner-chip-text" }, "Signed in as owner"), signOut);
-    var sessionBar = el("div", { id: "session-bar", class: "session-bar", role: "region", "aria-label": "Sign-in" }, guestChip, ownerChip);
+    var sessionBar = el("div", { id: "session-bar", class: "session-bar", role: "region", "aria-label": "Sign-in" }, ownerChip);
     sessionBar.hidden = true;
-    guestChip.hidden = true;
     ownerChip.hidden = true;
     var main = document.querySelector("main");
     if (main) main.insertBefore(sessionBar, main.firstChild);
-    forget.addEventListener("click", function () {
-      forgetPin();
-      gate("");
-    });
     signOut.addEventListener("click", function () {
       ownerMemory = "";
       try { sessionStorage.removeItem(ownerKey); } catch (err) {}
@@ -614,12 +602,9 @@
       syncEntry();
     });
     syncSession = function () {
-      var showGuest = guestOk && !!pin;
       var showOwner = !!ownerToken();
-      guestText.textContent = "Signed in as guest for " + gameLabel();
-      guestChip.hidden = !showGuest;
       ownerChip.hidden = !showOwner;
-      sessionBar.hidden = !showGuest && !showOwner;
+      sessionBar.hidden = !showOwner;
     };
 
     var dialogReturn = new WeakMap();
