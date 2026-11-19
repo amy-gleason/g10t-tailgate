@@ -21,4 +21,4 @@ MAX_POSTS = "500"
 MAX_REPLIES = "40"
 
 # Secrets, set only in Cloudflare after approval. Do not put values here:
-# GUEST_PIN_LSU, GUEST_PIN_KENTUCKY, OWNER_TOKEN
+# GUEST_PIN_LSU, GUEST_PIN_KENTUCKY, OWNER_TOKEN, TELEGRAPH_TOKEN
