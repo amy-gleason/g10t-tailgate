@@ -30,7 +30,7 @@ assert.strictEqual(lsu.kickoff, "3:30 PM ET");
 assert.strictEqual(lsu.schedule, undefined);
 assert.strictEqual(
   lsu.foodNote,
-  "Menu: Hamburgers, Hotdogs, Lettuce, Tomato, Onion & Condiments, Mac N Cheese, Rolls w/ Honey Cinnamon Butter, Assorted Cookies, 1 dozen frosted chocolate chip cookies, Peanuts.",
+  "Menu: Hamburgers, Hotdogs, Lettuce, Tomato, Onion & Condiments, Mac N Cheese, Rolls w/ Honey Cinnamon Butter, Assorted Cookies, 1 dozen frosted chocolate chip cookies, Peanuts. Condiments are included: ketchup, mustard, and relish.",
 );
 assert.ok(!lsu.foodNote.includes("Ordered for 20"));
 assert.ok(!/not confirmed|order placed|cater/i.test(lsu.foodNote));
@@ -104,6 +104,8 @@ assert.ok(!alabama.mediaApi);
 assert.ok(kentucky.foodNote.includes("Grilled Chicken Teriyaki"));
 assert.strictEqual(kentucky.telegraphPath, "G10T-tailgate-Kentucky-10-26");
 assert.ok(alabama.foodNote.startsWith("Ordered for 20:"));
+assert.ok(!alabama.foodNote.includes("ketchup, mustard, and relish"));
+assert.ok(!kentucky.foodNote.includes("ketchup, mustard, and relish"));
 assert.ok(alabama.items.some((item) => item.id === "cheese-slices"));
 assert.ok(!lsu.items.some((item) => item.id === "high-noons" || item.id === "beer"));
 

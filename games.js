@@ -172,7 +172,7 @@
       },
       heading: "Tennessee vs LSU, Neyland Stadium",
       leads: LEADS,
-      foodNote: "Menu: " + MENU,
+      foodNote: "Menu: " + MENU + " Condiments are included: ketchup, mustard, and relish.",
       items: ITEMS.filter(function (item) {
         return item.id !== "beer" && item.id !== "high-noons" && item.id !== "nutrl";
       }).concat([
