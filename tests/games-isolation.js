@@ -26,7 +26,7 @@ assert.strictEqual(
 );
 assert.strictEqual(new Set(paths).size, 3);
 
-assert.strictEqual(lsu.kickoff, "TBD");
+assert.strictEqual(lsu.kickoff, "3:30 PM ET");
 assert.strictEqual(lsu.schedule, undefined);
 assert.strictEqual(
   lsu.foodNote,
