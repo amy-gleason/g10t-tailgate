@@ -160,7 +160,7 @@
       celebration: "(also Amy\u2019s 55th birthday)",
       banner: "Tennessee vs LSU",
       date: "Saturday, November 21, 2026",
-      kickoff: "TBD",
+      kickoff: "3:30 PM ET",
       weather: {
         place: "Knoxville",
         latitude: 35.955,

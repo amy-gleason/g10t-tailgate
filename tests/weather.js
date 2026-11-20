@@ -57,6 +57,17 @@ assert.strictEqual(ready.conditions, "Partly Cloudy");
 assert.strictEqual(ready.temperature, "Daytime temperature 61°F");
 assert.strictEqual(ready.rain, "Chance of rain 15%");
 assert.ok(ready.note.includes("Kickoff time is not set"));
+const withKickoff = weather.buildView({
+  gameDate: "2026-11-21",
+  timeZone: zone,
+  kickoff: "3:30 PM ET",
+  updateTime: "2026-11-19T15:00:00Z",
+  periods: [
+    { name: "Saturday", isDaytime: true, startTime: "2026-11-21T06:00:00-05:00", temperature: 61, temperatureUnit: "F", shortForecast: "Partly Cloudy", probabilityOfPrecipitation: { value: 15 } },
+  ],
+});
+assert.strictEqual(withKickoff.note, "");
+assert.strictEqual(withKickoff.status, "ready");
 assert.ok(!JSON.stringify(ready).includes("48"));
 assert.ok(!JSON.stringify(ready).includes("40°"));
 
