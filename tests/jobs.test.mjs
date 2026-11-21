@@ -60,7 +60,7 @@ test("phone tabs reach the four jobs and stay out of the way on a wide screen", 
       width: node.getBoundingClientRect().width,
       height: node.getBoundingClientRect().height,
     })));
-    assert.deepEqual(tabs.map((tab) => tab.label.replace(/^[^A-Za-z]+/, "")), ["Game", "RSVP", "Bring", "Photos", "Messages"]);
+    assert.deepEqual(tabs.map((tab) => tab.label.replace(/^[^A-Za-z]+/, "")), ["Game", "RSVP", "Bring", "Gallery", "Feed"]);
     assert.equal(tabs[0].selected, "true");
     tabs.forEach((tab) => {
       assert.ok(tab.width >= 44 && tab.height >= 44, JSON.stringify(tab));

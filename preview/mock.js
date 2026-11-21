@@ -4,7 +4,7 @@
   var files = [
     { id: "sample-tent", name: "tent-setup.png", contentType: "image/png", bytes: 48211, createdAt: "2026-11-21T15:10:00.000Z", uploadedBy: "Sample guest", preview: "image" },
     { id: "sample-song", name: "rocky-top.webm", contentType: "video/webm", bytes: 1117, createdAt: "2026-11-21T15:30:00.000Z", uploadedBy: "Sample guest", preview: "video" },
-    { id: "sample-sign", name: "kiffin-sign.png", contentType: "image/png", bytes: 36004, createdAt: "2026-11-21T14:05:00.000Z", uploadedBy: "Sample guest", preview: "image" },
+    { id: "sample-sign", name: "kiffin-sign.png", contentType: "image/png", bytes: 36004, createdAt: "2026-11-21T14:05:00.000Z", uploadedBy: "Sample guest", preview: "image", caption: "Kiffin sign for the lawn." },
     { id: "sample-lawn", name: "lawn.png", contentType: "image/png", bytes: 40112, createdAt: "2026-11-21T13:40:00.000Z", uploadedBy: "Sample guest", preview: "image" },
     { id: "sample-chairs", name: "chairs.png", contentType: "image/png", bytes: 38820, createdAt: "2026-11-21T13:20:00.000Z", uploadedBy: "Sample guest", preview: "image" },
     { id: "sample-cooler", name: "cooler.png", contentType: "image/png", bytes: 35210, createdAt: "2026-11-21T13:05:00.000Z", uploadedBy: "Sample guest", preview: "image" },
@@ -20,6 +20,14 @@
       replies: [
         { id: "sample-reply", name: "Another guest", text: "On the way with ice.", createdAt: "2026-11-21T14:20:00.000Z" }
       ]
+    },
+    {
+      id: "sample-with-photo",
+      name: "Sample guest",
+      text: "Bringing the cooler.",
+      createdAt: "2026-11-21T15:40:00.000Z",
+      replies: [],
+      attachments: ["sample-cooler"]
     }
   ];
   function json(body, status) {

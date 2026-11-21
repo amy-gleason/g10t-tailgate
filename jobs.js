@@ -11,8 +11,8 @@
     { id: "bring", label: "Bring", mark: "🧺" },
   ];
   if (game.media) {
-    jobs.push({ id: "photos", label: "Photos", mark: "📷" });
-    jobs.push({ id: "messages", label: "Messages", mark: "💬" });
+    jobs.push({ id: "photos", label: "Gallery", mark: "📷" });
+    jobs.push({ id: "messages", label: "Feed", mark: "💬" });
   }
 
   var sectionsFor = {
@@ -52,8 +52,8 @@
   [
     ["rsvp", "I'm coming", "🙋", "job-count-rsvp", "Who's coming", true],
     ["bring", "Bring something", "🧺", "job-count-bring", "Food, drinks, and more", false],
-    ["photos", "Photos & videos", "📷", "job-count-photos", "See what was shared", false],
-    ["messages", "Messages", "💬", "job-count-messages", "Notes for this game", false],
+    ["photos", "Gallery", "📷", "job-count-photos", "Photos and videos", false],
+    ["messages", "Feed", "💬", "job-count-messages", "Posts, photos, and videos", false],
   ].forEach(function (item) {
     if ((item[0] === "photos" || item[0] === "messages") && !game.media) return;
     var count = el("span", { id: item[3] }, item[4]);
@@ -249,7 +249,7 @@
     main.insertBefore(banner, main.firstChild);
     var photosAcc = document.querySelector('.acc[data-section="photos"]');
     if (photosAcc && !photosAcc.querySelector(".past-photos-title")) {
-      photosAcc.insertBefore(el("h2", { class: "past-photos-title" }, "Photos & videos"), photosAcc.firstChild);
+      photosAcc.insertBefore(el("h2", { class: "past-photos-title" }, "Gallery"), photosAcc.firstChild);
     }
     var prompt = /^(I['’]ll bring|Add me|Sign me up|Add it|Add donation|Upload|Send message|Reply|Edit|Remove|Yes, remove)/;
     function hush(root) {
