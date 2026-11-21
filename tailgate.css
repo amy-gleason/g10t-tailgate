@@ -194,6 +194,9 @@ body.past-game.phone-jobs[data-job="game"] .acc[data-section="photos"] .acc-pane
 .input[aria-invalid="true"] { border-color: #9f1239; background: #fff1f2; }
 .shot-open { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: #171717; color: #fff; cursor: zoom-in; min-height: 48px; font-family: inherit; font-weight: 700; font-size: 1rem; line-height: 1.2; }
 .shot-open img { display: block; width: 100%; max-height: 240px; object-fit: contain; background: #171717; }
+.feed-shot { margin-top: 8px; }
+.feed-shot .shot-frame { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 4 / 3; background: #171717; color: #fff; overflow: hidden; font-weight: 800; font-size: 1.125rem; }
+.feed-shot .shot-frame img { width: 100%; height: 100%; object-fit: contain; }
 .photo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .photo-grid .shot-frame { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 4 / 3; background: #171717; color: #fff; overflow: hidden; font-family: inherit; font-weight: 800; font-size: 1.125rem; }
 .photo-grid .shot-frame img { width: 100%; height: 100%; max-height: none; object-fit: contain; }
