@@ -256,10 +256,30 @@ function metaValue(meta, key) {
   return found ? meta[found] : "";
 }
 
+function optionalCaption(value) {
+  if (value == null || value === "") return "";
+  if (typeof value !== "string") return null;
+  const text = value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (text.length > 200) return null;
+  return text;
+}
+
+function attachmentIds(value) {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.length > 8) return null;
+  const ids = [];
+  for (const id of value) {
+    if (typeof id !== "string" || !safeId(id) || ids.indexOf(id) !== -1) return null;
+    ids.push(id);
+  }
+  return ids;
+}
+
 function fileRecord(object) {
   const meta = object.customMetadata || {};
   const type = metaValue(meta, "contentType") || object.httpMetadata?.contentType || "application/octet-stream";
-  return {
+  const record = {
     id: object.key.split("/").pop(),
     name: metaValue(meta, "name") || "upload",
     contentType: type,
@@ -268,6 +288,9 @@ function fileRecord(object) {
     uploadedBy: metaValue(meta, "uploadedBy"),
     preview: previewKind(type),
   };
+  const caption = metaValue(meta, "caption");
+  if (caption) record.caption = caption;
+  return record;
 }
 
 async function handleFiles(request, env, game, origin, id) {
@@ -306,6 +329,8 @@ async function handleFiles(request, env, game, origin, id) {
     const ext = extensionOf(name);
     const guest = plain(request.headers.get("x-guest-name") || "", 40);
     if (!guest) return json({ error: "Enter your name." }, 400, origin);
+    const caption = optionalCaption(new URL(request.url).searchParams.get("caption"));
+    if (caption == null) return json({ error: "Keep the caption under 200 characters." }, 400, origin);
     if (!EXT_TYPE[ext] || EXT_TYPE[ext] !== type) return json({ error: "That file type is not allowed." }, 415, origin);
     const bytes = Number(request.headers.get("content-length"));
     const max = PHOTO_TYPES.has(type) ? num(env, "MAX_PHOTO_BYTES", 20971520) : num(env, "MAX_VIDEO_BYTES", 83886080);
@@ -333,17 +358,19 @@ async function handleFiles(request, env, game, origin, id) {
     }
     const fileId = crypto.randomUUID();
     const key = `files/${game}/${fileId}`;
+    const customMetadata = {
+      name,
+      contentType: type,
+      bytes: String(bytes),
+      uploadedBy: guest,
+      createdAt: new Date().toISOString(),
+    };
+    if (caption) customMetadata.caption = caption;
     let stored = null;
     try {
       stored = await env.MEDIA.put(key, request.body, {
         httpMetadata: { contentType: type },
-        customMetadata: {
-          name,
-          contentType: type,
-          bytes: String(bytes),
-          uploadedBy: guest,
-          createdAt: new Date().toISOString(),
-        },
+        customMetadata,
       });
       const head = stored ? await env.MEDIA.head(key) : null;
       const actual = head ? head.size : 0;
@@ -394,6 +421,8 @@ async function handlePosts(request, env, game, origin, id, replyId) {
     const body = messageText(payload?.text, 5000);
     if (!name || !body.text) return json({ error: "Enter your name and a message." }, 400, origin);
     if (body.tooLong) return json({ error: "That message is longer than 5000 characters." }, 400, origin);
+    const attachments = attachmentIds(payload?.attachments);
+    if (attachments == null) return json({ error: "Choose 8 photos or videos or fewer." }, 400, origin);
     const text = body.text;
     const allowed = await rateAllow(env, game, "posts", 12);
     if (allowed === "paused") return movePaused(origin);
@@ -412,6 +441,7 @@ async function handlePosts(request, env, game, origin, id, replyId) {
       return movePaused(origin);
     }
     const post = { id: crypto.randomUUID(), name, text, createdAt: new Date().toISOString(), replies: [] };
+    if (attachments.length) post.attachments = attachments;
     let stored = null;
     try {
       stored = await mutateJson(env, `posts/${game}/${post.id}.json`, () => post, () => post);

@@ -118,7 +118,7 @@
 
   var batchHost = null;
 
-  function uploadFiles(files, name) {
+  function uploadFiles(files, name, caption) {
     var batchId = crypto.randomUUID();
     var batchSize = files.length;
     if (!batchHost) batchHost = el("div", { class: "batch" });
@@ -152,7 +152,9 @@
       paint();
       return new Promise(function (resolve) {
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", api + "/v1/" + gameId + "/files");
+        var target = api + "/v1/" + gameId + "/files";
+        if (caption) target += "?caption=" + encodeURIComponent(caption);
+        xhr.open("POST", target);
         xhr.setRequestHeader("content-type", typeFor(item.file));
         xhr.setRequestHeader("x-file-name", item.file.name);
         xhr.setRequestHeader("x-guest-name", name);
@@ -168,6 +170,7 @@
           try { payload = JSON.parse(xhr.responseText); } catch (err) {}
           if (xhr.status >= 200 && xhr.status < 300) {
             item.state = "uploaded";
+            item.id = payload.id || "";
             item.error = "";
             item.status.textContent = "Uploaded";
           } else {
@@ -218,7 +221,9 @@
       run(failed, crypto.randomUUID(), failed.length);
     });
     paint();
-    return run(items, batchId, batchSize);
+    return run(items, batchId, batchSize).then(function () {
+      return items.filter(function (item) { return item.state === "uploaded" && item.id; }).map(function (item) { return item.id; });
+    });
   }
 
   function mediaType(file) {
@@ -343,6 +348,7 @@
     var image = file.preview === "image";
     var card = el("article", { class: image || playable ? "shot" : "file-tile" });
     var meta = el("div", { class: "file-tile" },
+      file.caption ? el("p", { class: "message-body" }, String(file.caption)) : null,
       el("p", { class: "row-title" }, file.name),
       el("p", { class: "row-meta" }, metaLine(file))
     );
@@ -418,6 +424,9 @@
     var nameError = el("p", { class: "field-error", id: "upload-name-error", role: "alert" });
     nameError.hidden = true;
     var picker = el("input", { class: "file-input", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
+    var caption = messageBox("Optional caption");
+    caption.maxLength = 200;
+    caption.id = "gallery-caption";
     var list = el("div", { class: "photo-grid" });
     galleryFiles.forEach(function (file) { list.append(fileCard(file)); });
     name.addEventListener("input", function () {
@@ -431,6 +440,7 @@
     var form = el("form", { class: "stack" },
       el("label", { class: "field" }, el("span", { class: "label" }, "Your name (required)"), name, nameError),
       el("label", { class: "field" }, el("span", { class: "label" }, "Photos and videos"), picker),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Caption (optional)"), caption),
       batchError,
       el("button", { type: "submit", class: "btn" }, "Upload")
     );
@@ -449,18 +459,27 @@
         batchError.textContent = "Choose 50 files or fewer at a time.";
         return;
       }
+      if (caption.value.length > 200) {
+        batchError.hidden = false;
+        batchError.textContent = "Keep the caption under 200 characters.";
+        return;
+      }
       batchError.hidden = true;
       batchError.textContent = "";
-      uploadFiles(Array.from(picker.files), name.value.trim());
+      uploadFiles(Array.from(picker.files), name.value.trim(), caption.value.trim()).then(function () {
+        caption.value = "";
+        loadPosts();
+      });
       picker.value = "";
     });
     photos.replaceChildren();
     photos.append(
-      el("p", { class: "lead" }, "Photos and videos for this game stay separate from the other games."),
+      el("p", { class: "lead" }, "Photos and videos for this game stay in this gallery. A caption is optional, and the upload also shows in the feed."),
       form
     );
     if (batchHost) photos.append(batchHost);
     photos.append(list);
+    paintFeed();
     refreshManage();
     syncSession();
   }
@@ -540,6 +559,85 @@
     return form;
   }
 
+  function fileMap() {
+    var map = Object.create(null);
+    galleryFiles.forEach(function (file) { map[file.id] = file; });
+    return map;
+  }
+  function feedShot(file) {
+    var playable = Boolean(videoType(file));
+    var image = file.preview === "image";
+    var frame = el("span", { class: playable ? "shot-frame shot-play" : "shot-frame" }, playable ? "Play" : "");
+    var open = el("button", { type: "button", class: "shot-open", "aria-label": openLabel(file) }, frame);
+    var wrap = el("div", { class: "feed-shot", "data-file-id": file.id }, open);
+    open.addEventListener("click", function () { showViewer(file.id, open); });
+    if (!image) return wrap;
+    var started = false;
+    function start() {
+      if (started) return;
+      started = true;
+      fileBytes(file, true).then(function (url) {
+        if (!started || !wrap.isConnected) {
+          dropFileBytes(file.id);
+          return;
+        }
+        frame.replaceChildren(el("img", { src: url, alt: mediaAlt(file), width: "4", height: "3" }));
+      }).catch(function () { started = false; });
+    }
+    function stop() {
+      if (viewerHolding === file.id) return;
+      started = false;
+      frame.replaceChildren();
+      dropFileBytes(file.id);
+    }
+    tileJobs.set(wrap, { start: start, stop: stop });
+    ensureTileObserver().observe(wrap);
+    return wrap;
+  }
+  function postArticle(post, known) {
+    var block = el("article", { class: "post" },
+      el("p", { class: "row-title" }, post.name),
+      el("p", { class: "hint" }, when(post.createdAt)),
+      messageBody(post.text)
+    );
+    (post.attachments || []).forEach(function (id) {
+      if (known[id]) block.append(feedShot(known[id]));
+    });
+    (post.replies || []).forEach(function (reply) {
+      block.append(el("div", { class: "reply" },
+        el("p", { class: "row-title" }, reply.name),
+        el("p", { class: "hint" }, when(reply.createdAt)),
+        messageBody(reply.text)
+      ));
+    });
+    block.append(replyForm(post));
+    return block;
+  }
+  function paintFeed() {
+    var list = document.getElementById("feed-list");
+    if (!list) return;
+    var known = fileMap();
+    var used = Object.create(null);
+    messagePosts.forEach(function (post) {
+      (post.attachments || []).forEach(function (id) { used[id] = true; });
+    });
+    var rows = [];
+    messagePosts.forEach(function (post) {
+      rows.push({ at: post.createdAt || "", node: postArticle(post, known) });
+    });
+    galleryFiles.forEach(function (file) {
+      if (used[file.id]) return;
+      var block = el("article", { class: "post feed-media" },
+        el("p", { class: "row-title" }, file.uploadedBy || file.name || "Shared"),
+        el("p", { class: "hint" }, when(file.createdAt)),
+        file.caption ? messageBody(file.caption) : null,
+        feedShot(file)
+      );
+      rows.push({ at: file.createdAt || "", node: block });
+    });
+    rows.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
+    list.replaceChildren.apply(list, rows.map(function (row) { return row.node; }));
+  }
   function renderPosts(data) {
     messagePosts = data.posts || [];
     var name = bindGuestName(el("input", {
@@ -553,11 +651,13 @@
     var nameError = el("p", { class: "field-error", id: "message-name-error", role: "alert" });
     nameError.hidden = true;
     var text = messageBox("Write a message");
+    var picker = el("input", { class: "file-input", id: "feed-files", type: "file", multiple: "", accept: "image/*,video/*,.heic,.heif,.mov" });
     var error = el("div");
-    var form = el("form", { class: "stack" },
-      el("p", { class: "lead" }, "Messages and replies for this game. This is a board, not a live chat."),
+    var form = el("form", { class: "stack", id: "feed-form" },
+      el("p", { class: "lead" }, "The feed shows messages, photos, and videos, newest first."),
       el("label", { class: "field" }, el("span", { class: "label" }, "Your name"), name, nameError),
       el("label", { class: "field" }, el("span", { class: "label" }, "Message"), text),
+      el("label", { class: "field" }, el("span", { class: "label" }, "Photos or videos (optional)"), picker),
       error,
       el("button", { type: "submit", class: "btn" }, "Send message")
     );
@@ -583,39 +683,45 @@
         error.replaceChildren(el("p", { class: "form-error" }, tooLong("message", text.value, POST_LIMIT)));
         return;
       }
-      fetch(api + "/v1/" + gameId + "/posts", {
-        method: "POST",
-        headers: guestHeaders({ "content-type": "application/json" }),
-        body: JSON.stringify({ name: name.value.trim(), text: text.value }),
-      }).then(function (response) { return response.json().then(function (payload) { return { ok: response.ok, payload: payload }; }); })
-        .then(function (result) {
-          if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not send that message.")); return; }
-          text.value = "";
-          fitMessage(text);
-          loadPosts();
-        });
-    });
-    var list = el("div", { class: "post-list" });
-    (data.posts || []).forEach(function (post) {
-      var block = el("article", { class: "post" },
-        el("p", { class: "row-title" }, post.name),
-        el("p", { class: "hint" }, when(post.createdAt)),
-        messageBody(post.text)
-      );
-      (post.replies || []).forEach(function (reply) {
-        var replyBlock = el("div", { class: "reply" },
-          el("p", { class: "row-title" }, reply.name),
-          el("p", { class: "hint" }, when(reply.createdAt)),
-          messageBody(reply.text)
-        );
-        block.append(replyBlock);
+      if (!text.value.trim()) {
+        error.replaceChildren(el("p", { class: "form-error" }, "Enter a message. Add photos or videos if you want them on this post."));
+        return;
+      }
+      var chosen = Array.from(picker.files || []);
+      if (chosen.length > 8) {
+        error.replaceChildren(el("p", { class: "form-error" }, "Choose 8 photos or videos or fewer."));
+        return;
+      }
+      var sending = chosen.length
+        ? uploadFiles(chosen, name.value.trim(), "").then(function (ids) {
+          if (ids.length !== chosen.length) throw new Error("Could not upload every file.");
+          return ids;
+        })
+        : Promise.resolve([]);
+      sending.then(function (ids) {
+        var body = { name: name.value.trim(), text: text.value };
+        if (ids.length) body.attachments = ids;
+        return fetch(api + "/v1/" + gameId + "/posts", {
+          method: "POST",
+          headers: guestHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify(body),
+        }).then(function (response) { return response.json().then(function (payload) { return { ok: response.ok, payload: payload }; }); });
+      }).then(function (result) {
+        if (!result.ok) { error.replaceChildren(el("p", { class: "form-error" }, result.payload.error || "Could not send that message.")); return; }
+        text.value = "";
+        fitMessage(text);
+        picker.value = "";
+        loadPosts();
+        if (chosen.length) loadFiles();
+      }).catch(function (err) {
+        error.replaceChildren(el("p", { class: "form-error" }, err && err.message ? err.message : "Could not send that message."));
       });
-      block.append(replyForm(post));
-      list.append(block);
     });
+    var list = el("div", { class: "post-list", id: "feed-list" });
     var refresh = el("button", { type: "button", class: "btn ghost" }, "Refresh");
-    refresh.addEventListener("click", loadPosts);
+    refresh.addEventListener("click", function () { loadPosts(); loadFiles(); });
     posts.replaceChildren(form, refresh, list);
+    paintFeed();
     refreshManage();
     syncSession();
   }
@@ -825,7 +931,7 @@
       var title = el("h2", { id: "viewer-title" });
       var byline = el("p", { class: "byline" });
       var caption = el("p", { class: "viewer-caption" });
-      var panel = el("div", { class: "viewer-panel" }, title, byline, caption, el("p", { class: "hint" }, "Captions and comments come later. This shows the file name and the details already stored with it."));
+      var panel = el("div", { class: "viewer-panel" }, title, byline, caption, el("p", { class: "hint" }, "A saved caption shows here. Otherwise this is the file name and who shared it."));
       function go(delta) { return function () { stepViewer(delta); }; }
       prev.addEventListener("click", go(-1));
       prevSide.addEventListener("click", go(-1));
@@ -1003,7 +1109,7 @@
         });
       });
       var modPanel = el("div", { id: "manage-moderation" },
-        el("p", { class: "hint" }, "Newest first. Delete asks once more, then removes the item. Hiding, captions, and comments are not part of this update."),
+        el("p", { class: "hint" }, "Newest first. Delete asks once more, then removes the item. Hiding and comments are not part of this update."),
         el("div", { class: "chip-row", role: "group", "aria-label": "Show" }, filterButtons.all, filterButtons.files, filterButtons.messages),
         modList,
         modEmpty
